@@ -1,11 +1,14 @@
 import type { AnyDeps } from "../types";
 
-/** Account commands, isolated from other portal actions. */
+/**
+ * Handles Sign-In form submission (`homesignin`), OneID eKYC sign-up triggers (`homesignup`, `signup`),
+ * role route switching (`signinroute`), and demo account autofill (`homedemo`, `sfill`).
+ */
 export function createAccountActions(dependencies: AnyDeps) {
-  return async function handleAccount(act: string, b: HTMLElement): Promise<boolean> {
-    switch (act) {
+  return async function handleAccount(action: string, button: HTMLElement): Promise<boolean> {
+    switch (action) {
       case "signinroute": {
-        const nextRole = b.dataset["role"] || "applicant";
+        const nextRole = button.dataset["role"] || "applicant";
         dependencies.UI.home.role = nextRole;
         dependencies.UI.home.err = "";
         dependencies.UI.home.id = "";
@@ -15,139 +18,177 @@ export function createAccountActions(dependencies: AnyDeps) {
         window.OMRBridge?.onSignInRoleChange?.(nextRole);
         break;
       }
+
       case "signup":
-        dependencies.startOnb(b.dataset["p"]);
+        dependencies.startOnb(button.dataset["p"]);
         break;
+
       case "signinnew": {
         dependencies.closeModal();
-        const pp = b.dataset["p"] ?? "",
-          n = b.dataset["n"] ?? "",
-          pend =
-            dependencies.UI.pending &&
-            dependencies.UI.pending.p === pp &&
-            dependencies.UI.pending.nid === n
-              ? dependencies.UI.pending
-              : null;
-        dependencies.doLogin(pp, n, pend ? pend.appId : null);
+        const targetPortal = button.dataset["p"] ?? "";
+        const nid = button.dataset["n"] ?? "";
+        const pendingRedirect =
+          dependencies.UI.pending &&
+          dependencies.UI.pending.p === targetPortal &&
+          dependencies.UI.pending.nid === nid
+            ? dependencies.UI.pending
+            : null;
+        dependencies.doLogin(targetPortal, nid, pendingRedirect ? pendingRedirect.appId : null);
         break;
       }
+
       case "sfill": {
-        const n = b.dataset["n"] ?? "";
-        const nidInput = dependencies.$("#su-nid") as HTMLInputElement | null,
-          dobInput = dependencies.$("#su-dob") as HTMLInputElement | null,
-          mobInput = dependencies.$("#su-mob") as HTMLInputElement | null,
-          mailInput = dependencies.$("#su-mail") as HTMLInputElement | null,
-          licInput = dependencies.$("#su-lic") as HTMLInputElement | null;
-        const lic = dependencies.licOf(n);
-        if (nidInput) nidInput.value = n;
-        if (dobInput) dobInput.value = dependencies.PEOPLE[n]?.dob ?? "";
-        if (mobInput)
-          mobInput.value = lic ? dependencies.REGISTRARS[lic].mobile : "017" + n.slice(-8);
-        if (mailInput)
-          mailInput.value = lic
-            ? dependencies.REGISTRARS[lic].email
-            : (dependencies.PEOPLE[n]?.en ?? n)
+        const nid = button.dataset["n"] ?? "";
+        const nidInput = dependencies.$("#su-nid") as HTMLInputElement | null;
+        const dobInput = dependencies.$("#su-dob") as HTMLInputElement | null;
+        const mobileInput = dependencies.$("#su-mob") as HTMLInputElement | null;
+        const emailInput = dependencies.$("#su-mail") as HTMLInputElement | null;
+        const licenceInput = dependencies.$("#su-lic") as HTMLInputElement | null;
+
+        const licenceNo = dependencies.licOf(nid);
+        if (nidInput) nidInput.value = nid;
+        if (dobInput) dobInput.value = dependencies.PEOPLE[nid]?.dob ?? "";
+        if (mobileInput) {
+          mobileInput.value = licenceNo
+            ? dependencies.REGISTRARS[licenceNo].mobile
+            : "017" + nid.slice(-8);
+        }
+        if (emailInput) {
+          emailInput.value = licenceNo
+            ? dependencies.REGISTRARS[licenceNo].email
+            : (dependencies.PEOPLE[nid]?.en ?? nid)
                 .toLowerCase()
                 .replace(/[^a-z]+/g, ".")
                 .replace(/^\.|\.$/g, "") + "@mail.com";
-        if (licInput) licInput.value = lic || "";
+        }
+        if (licenceInput) licenceInput.value = licenceNo || "";
         break;
       }
+
       case "homesignin":
       case "homesignup": {
-        const H = dependencies.UI.home;
-        if (!H.role) H.role = "applicant";
-        const rr: string = H.role;
-        if (act === "homesignup") {
-          if (rr === "admin" || rr === "super") {
-            H.err = "Official accounts can't sign up here.";
+        const homeState = dependencies.UI.home;
+        if (!homeState.role) {
+          homeState.role = "applicant";
+        }
+        const activeRole: string = homeState.role;
+
+        // 1. Handle clicking "Sign up with OneID eKYC"
+        if (action === "homesignup") {
+          if (activeRole === "admin" || activeRole === "super") {
+            homeState.err = "Official accounts can't sign up here.";
             dependencies.render();
             break;
           }
-          dependencies.startOnb(rr);
+          dependencies.startOnb(activeRole);
           break;
         }
-        const idv = (H.id || "").trim().toLowerCase(),
-          pwv = H.pw || "";
-        if (!idv || !pwv) {
-          H.err =
-            rr === "admin" || rr === "super"
+
+        // 2. Validate credentials on Sign-In
+        const identifierInput = (homeState.id || "").trim().toLowerCase();
+        const passwordInput = homeState.pw || "";
+
+        if (!identifierInput || !passwordInput) {
+          homeState.err =
+            activeRole === "admin" || activeRole === "super"
               ? "Enter your official email and password."
               : "Enter your email or mobile and your password.";
           dependencies.render();
           break;
         }
-        if (rr === "admin" || rr === "super") {
-          const ok =
-            rr === "super" ? "rafiqul.islam@lawjustice.gov.bd" : "farhana.akter@lawjustice.gov.bd";
-          if (idv !== ok) {
-            H.err =
+
+        // 3. Official Admin / Super Admin sign-in
+        if (activeRole === "admin" || activeRole === "super") {
+          const expectedOfficialEmail =
+            activeRole === "super"
+              ? "rafiqul.islam@lawjustice.gov.bd"
+              : "farhana.akter@lawjustice.gov.bd";
+
+          if (identifierInput !== expectedOfficialEmail) {
+            homeState.err =
               "This email isn't a registered " +
-              (rr === "super" ? "Super Admin" : "Admin") +
+              (activeRole === "super" ? "Super Admin" : "Admin") +
               " account.";
             dependencies.render();
             break;
           }
-          H.id = "";
-          H.pw = "";
-          H.err = "";
+
+          homeState.id = "";
+          homeState.pw = "";
+          homeState.err = "";
           dependencies.UI.portal = "enl";
-          window.ENLBridge?.signIn(rr);
+          window.ENLBridge?.signIn(activeRole);
           dependencies.render();
           window.scrollTo(0, 0);
           dependencies.toast("Signed in");
           break;
         }
-        const okRoles =
-          rr === "applicant" ? ["Applicant"] : ["Marriage Registrar", "Registrar applicant"];
-        const digitsOnly = idv.replace(/\D/g, "");
+
+        // 4. Citizen Applicant or Marriage Registrar sign-in (matches email, mobile, or NID)
+        const allowedUserRoles =
+          activeRole === "applicant"
+            ? ["Applicant"]
+            : ["Marriage Registrar", "Registrar applicant"];
+
+        const digitsOnly = identifierInput.replace(/\D/g, "");
         const normalizedMobile = digitsOnly.length === 10 ? "0" + digitsOnly : digitsOnly;
-        const nid = Object.keys(dependencies.S.users).find((n) => {
-          const u = dependencies.S.users[n];
-          if (!okRoles.includes(u.role)) return false;
-          const emailMatch = (u.email || "").toLowerCase() === idv;
-          const mobileMatch =
+
+        const matchedNid = Object.keys(dependencies.S.users).find((nid) => {
+          const userRecord = dependencies.S.users[nid];
+          if (!allowedUserRoles.includes(userRecord.role)) return false;
+
+          const emailMatches = (userRecord.email || "").toLowerCase() === identifierInput;
+          const mobileMatches =
             Boolean(normalizedMobile) &&
-            ((u.mobile || "") === normalizedMobile || (u.mobile || "") === idv.replace(/\s+/g, ""));
-          const nidMatch = n === idv;
-          return emailMatch || mobileMatch || nidMatch;
+            ((userRecord.mobile || "") === normalizedMobile ||
+              (userRecord.mobile || "") === identifierInput.replace(/\s+/g, ""));
+          const nidMatches = nid === identifierInput;
+
+          return emailMatches || mobileMatches || nidMatches;
         });
-        if (!nid) {
-          H.err =
+
+        if (!matchedNid) {
+          homeState.err =
             "No " +
-            (rr === "applicant" ? "applicant" : "registrar") +
+            (activeRole === "applicant" ? "applicant" : "registrar") +
             " OneID account matches this email or mobile. Check it, or sign up.";
           dependencies.render();
           break;
         }
-        const matchedUser = dependencies.S.users[nid];
-        if (matchedUser?.password && matchedUser.password !== pwv) {
-          H.err = "Incorrect password for this account. Please try again.";
+
+        const matchedUser = dependencies.S.users[matchedNid];
+        if (matchedUser?.password && matchedUser.password !== passwordInput) {
+          homeState.err = "Incorrect password for this account. Please try again.";
           dependencies.render();
           break;
         }
-        H.id = "";
-        H.pw = "";
-        H.err = "";
-        dependencies.UI.portal = rr;
-        dependencies.doLogin(rr, nid);
+
+        homeState.id = "";
+        homeState.pw = "";
+        homeState.err = "";
+        dependencies.UI.portal = activeRole;
+        dependencies.doLogin(activeRole, matchedNid);
         break;
       }
+
       case "homedemo": {
-        const val = b.dataset["v"] ?? "";
-        dependencies.UI.home.id = val;
+        const demoEmail = button.dataset["v"] ?? "";
+        dependencies.UI.home.id = demoEmail;
         const matchedNid = Object.keys(dependencies.S.users).find(
-          (n) => (dependencies.S.users[n].email || "").toLowerCase() === val.toLowerCase(),
+          (nid) =>
+            (dependencies.S.users[nid].email || "").toLowerCase() === demoEmail.toLowerCase(),
         );
-        const savedPw = matchedNid ? dependencies.S.users[matchedNid]?.password : "";
-        dependencies.UI.home.pw = savedPw || "demo-pass";
+        const savedPassword = matchedNid ? dependencies.S.users[matchedNid]?.password : "";
+        dependencies.UI.home.pw = savedPassword || "demo-pass";
         dependencies.UI.home.err = "";
         dependencies.render();
         break;
       }
+
       default:
         return false;
     }
+
     return true;
   };
 }

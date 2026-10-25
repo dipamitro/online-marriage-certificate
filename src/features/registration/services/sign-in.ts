@@ -1,12 +1,33 @@
 import type { AnyDeps } from "../types";
 
-/** services/sign-in. Dependencies: UI, licOf, markSeen, render, toast. */
+/**
+ * Handles authenticating a user into the requested portal (`applicant`, `registrar`, `esign`, `wallet`)
+ * and routing unenlisted registrars to the Enlistment Portal (`/enlistment`).
+ *
+ * Dependencies: `UI`, `licOf`, `markSeen`, `render`, `toast`.
+ */
 export function createServicesSignIn(dependencies: AnyDeps) {
-  function doLogin(p: string, nid: string, openId?: string | null, asEsign?: boolean): void {
-    if (p === "registrar" && !dependencies.licOf(nid)) {
+  /**
+   * Signs a user (identified by `nid`) into `portalKey`.
+   *
+   * - If `portalKey === "registrar"` and the user does not yet hold an active registrar licence,
+   *   they are redirected to the Marriage Registrar Enlistment Portal (`/enlistment`).
+   * - Otherwise, their session is stored in `UI.auth[portalKey]` and the portal dashboard opens.
+   */
+  function doLogin(
+    portalKey: string,
+    nid: string,
+    openApplicationId?: string | null,
+    openAsEsign?: boolean,
+  ): void {
+    const registrarLicence = dependencies.licOf(nid);
+
+    // Unenlisted registrar applicants go to the Enlistment Portal (/enlistment)
+    if (portalKey === "registrar" && !registrarLicence) {
       dependencies.UI.login.registrar = nid;
-      if (dependencies.UI.pending && dependencies.UI.pending.p === p)
+      if (dependencies.UI.pending && dependencies.UI.pending.p === portalKey) {
         dependencies.UI.pending = null;
+      }
       dependencies.UI.portal = "enl";
       window.ENLBridge?.show("applicant", nid);
       dependencies.render();
@@ -14,27 +35,50 @@ export function createServicesSignIn(dependencies: AnyDeps) {
       dependencies.toast("Signed in with OneID");
       return;
     }
-    dependencies.UI.auth[p] = p === "registrar" ? (dependencies.licOf(nid) ?? null) : nid;
-    dependencies.UI.login[p] = nid;
-    dependencies.UI.page[p] = p === "wallet" ? "vault" : "dash";
-    dependencies.UI.open[p] = null;
+
+    // Standard portal sign-in
+    dependencies.UI.auth[portalKey] = portalKey === "registrar" ? (registrarLicence ?? null) : nid;
+    dependencies.UI.login[portalKey] = nid;
+    dependencies.UI.page[portalKey] = portalKey === "wallet" ? "vault" : "dash";
+    dependencies.UI.open[portalKey] = null;
     dependencies.UI.accept = false;
-    if (p === "wallet") {
-      dependencies.UI.wallet = { cat: openId ? "marriage" : null, doc: null, sb: false };
-      if (openId) dependencies.markSeen(nid);
-    } else if (openId) dependencies.UI.open[p] = openId;
-    const pe =
-      dependencies.UI.pending && dependencies.UI.pending.p === p ? dependencies.UI.pending : null;
+
+    // Configure OneID Wallet view or open a specific application if deep-linked
+    if (portalKey === "wallet") {
+      dependencies.UI.wallet = {
+        cat: openApplicationId ? "marriage" : null,
+        doc: null,
+        sb: false,
+      };
+      if (openApplicationId) {
+        dependencies.markSeen(nid);
+      }
+    } else if (openApplicationId) {
+      dependencies.UI.open[portalKey] = openApplicationId;
+    }
+
+    // Check if the user arrived via an eSign email invitation link
+    const pendingRedirect =
+      dependencies.UI.pending && dependencies.UI.pending.p === portalKey
+        ? dependencies.UI.pending
+        : null;
+
     dependencies.UI.open.esign = null;
-    if (p === "applicant" && (asEsign || (pe && pe.esign))) {
+    if (portalKey === "applicant" && (openAsEsign || (pendingRedirect && pendingRedirect.esign))) {
       dependencies.UI.open.applicant = null;
       dependencies.UI.page.applicant = "esignreq";
-      dependencies.UI.open.esign = openId || (pe && pe.appId) || null;
+      dependencies.UI.open.esign =
+        openApplicationId || (pendingRedirect && pendingRedirect.appId) || null;
     }
-    if (pe) dependencies.UI.pending = null;
+
+    if (pendingRedirect) {
+      dependencies.UI.pending = null;
+    }
+
     dependencies.render();
     window.scrollTo(0, 0);
     dependencies.toast("Signed in with OneID");
   }
+
   return { doLogin };
 }

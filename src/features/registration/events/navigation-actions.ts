@@ -1,114 +1,146 @@
 import type { AnyDeps } from "../types";
 
-/** Navigation commands, isolated from other portal actions. */
+/**
+ * Handles top-level portal navigation, sidebar toggling, page switching,
+ * sign-out, and demo data reset (`↺ Reset demo`).
+ */
 export function createNavigationActions(dependencies: AnyDeps) {
-  return async function handleNavigation(act: string, b: HTMLElement): Promise<boolean> {
-    const id = b.dataset["id"] ?? null,
-      P: string = dependencies.UI.portal;
-    const top = () => window.scrollTo(0, 0);
-    switch (act) {
+  return async function handleNavigation(action: string, button: HTMLElement): Promise<boolean> {
+    const applicationId = button.dataset["id"] ?? null;
+    const currentPortal: string = dependencies.UI.portal;
+    const scrollToTop = () => window.scrollTo(0, 0);
+
+    switch (action) {
       case "portal":
-        dependencies.UI.portal = b.dataset["p"] ?? "home";
+        dependencies.UI.portal = button.dataset["p"] ?? "home";
         dependencies.UI.sb = false;
         dependencies.render();
-        top();
+        scrollToTop();
         break;
+
       case "login": {
-        const lp = b.dataset["p"] ?? "applicant",
-          n = dependencies.UI.login[lp];
-        if (!n || !dependencies.userOf(n)) {
+        const targetPortal = button.dataset["p"] ?? "applicant";
+        const selectedNid = dependencies.UI.login[targetPortal];
+        if (!selectedNid || !dependencies.userOf(selectedNid)) {
           dependencies.toast("Sign up first");
           break;
         }
-        dependencies.doLogin(lp, n);
+        dependencies.doLogin(targetPortal, selectedNid);
         break;
       }
+
       case "loginOLD": {
-        const pKey = b.dataset["p"] ?? "applicant";
-        dependencies.UI.auth[pKey] = dependencies.UI.login[pKey];
-        dependencies.UI.page[pKey] = "dash";
-        dependencies.UI.open[pKey] = null;
+        const targetPortal = button.dataset["p"] ?? "applicant";
+        dependencies.UI.auth[targetPortal] = dependencies.UI.login[targetPortal];
+        dependencies.UI.page[targetPortal] = "dash";
+        dependencies.UI.open[targetPortal] = null;
         dependencies.render();
-        top();
-        if (pKey === "esign") dependencies.toast("Signed in with OneID");
+        scrollToTop();
+        if (targetPortal === "esign") {
+          dependencies.toast("Signed in with OneID");
+        }
         break;
       }
+
       case "logout":
-        if (P === "wallet") dependencies.UI.wallet = { cat: null, doc: null, sb: false };
-        dependencies.UI.auth[P] = null;
-        dependencies.UI.open[P] = null;
+        if (currentPortal === "wallet") {
+          dependencies.UI.wallet = { cat: null, doc: null, sb: false };
+        }
+        dependencies.UI.auth[currentPortal] = null;
+        dependencies.UI.open[currentPortal] = null;
         dependencies.UI.draft = null;
-        if (P !== "wallet") {
-          if (P === "applicant" || P === "registrar") {
-            dependencies.UI.home.role = P;
+
+        if (currentPortal !== "wallet") {
+          if (currentPortal === "applicant" || currentPortal === "registrar") {
+            dependencies.UI.home.role = currentPortal;
           }
           dependencies.UI.portal = "home";
         }
         dependencies.render();
-        if (P !== "wallet") {
+        if (currentPortal !== "wallet") {
           window.OMRBridge?.onSignInRoleChange?.(dependencies.UI.home.role || "applicant");
         }
         break;
+
       case "opensb":
         dependencies.UI.sb = true;
         dependencies.render();
         break;
+
       case "closesb":
         dependencies.UI.sb = false;
         dependencies.render();
         break;
-      case "page":
-        if (b.dataset["pg"] === "enl-licence") {
-          const authReg = dependencies.UI.auth.registrar ?? "";
-          const rn = dependencies.REGISTRARS[authReg] && dependencies.REGISTRARS[authReg].nid;
+
+      case "page": {
+        const targetPage = button.dataset["pg"] ?? "dash";
+
+        if (targetPage === "enl-licence") {
+          const activeRegistrarLicence = dependencies.UI.auth.registrar ?? "";
+          const registrarNid =
+            dependencies.REGISTRARS[activeRegistrarLicence] &&
+            dependencies.REGISTRARS[activeRegistrarLicence].nid;
           dependencies.UI.portal = "enl";
-          window.ENLBridge?.show("applicant", rn, "licence");
+          window.ENLBridge?.show("applicant", registrarNid, "licence");
           dependencies.render();
-          window.scrollTo(0, 0);
+          scrollToTop();
           break;
         }
-        dependencies.UI.page[P] = b.dataset["pg"] ?? "dash";
-        dependencies.UI.open[P] = null;
-        if (P === "applicant") dependencies.UI.open.esign = null;
+
+        dependencies.UI.page[currentPortal] = targetPage;
+        dependencies.UI.open[currentPortal] = null;
+        if (currentPortal === "applicant") {
+          dependencies.UI.open.esign = null;
+        }
         dependencies.UI.sb = false;
         dependencies.UI.accept = false;
-        if (b.dataset["pg"] === "new") dependencies.startDraft(null);
+        if (targetPage === "new") {
+          dependencies.startDraft(null);
+        }
         dependencies.render();
-        top();
+        scrollToTop();
         break;
+      }
+
       case "openapp": {
-        const a = dependencies.appById(id);
-        const pTarget = b.dataset["p"] ?? P;
-        if (pTarget === "applicant" && a && ["draft"].includes(a.status)) {
-          dependencies.startDraft(a);
+        const application = dependencies.appById(applicationId);
+        const targetPortal = button.dataset["p"] ?? currentPortal;
+        if (targetPortal === "applicant" && application && ["draft"].includes(application.status)) {
+          dependencies.startDraft(application);
         } else {
-          dependencies.UI.open[pTarget] = id;
+          dependencies.UI.open[targetPortal] = applicationId;
         }
         dependencies.UI.accept = false;
         dependencies.render();
-        top();
+        scrollToTop();
         break;
       }
+
       case "back":
-        if (P === "applicant" && dependencies.UI.open.esign) dependencies.UI.open.esign = null;
-        else dependencies.UI.open[P] = null;
+        if (currentPortal === "applicant" && dependencies.UI.open.esign) {
+          dependencies.UI.open.esign = null;
+        } else {
+          dependencies.UI.open[currentPortal] = null;
+        }
         dependencies.UI.accept = false;
         dependencies.render();
-        top();
+        scrollToTop();
         break;
+
       case "gorole": {
-        const rr = b.dataset["r"] ?? "applicant";
-        if (rr === "admin" || rr === "super") {
+        const targetRole = button.dataset["r"] ?? "applicant";
+        if (targetRole === "admin" || targetRole === "super") {
           dependencies.UI.portal = "enl";
-          window.ENLBridge?.show(rr);
+          window.ENLBridge?.show(targetRole);
           dependencies.render();
         } else {
-          dependencies.UI.portal = rr;
+          dependencies.UI.portal = targetRole;
           dependencies.render();
         }
-        window.scrollTo(0, 0);
+        scrollToTop();
         break;
       }
+
       case "reset":
         window.ENLBridge?.reset();
         dependencies.ls.del(dependencies.STORE);
@@ -127,9 +159,11 @@ export function createNavigationActions(dependencies: AnyDeps) {
         dependencies.render();
         dependencies.toast("Demo data restored");
         break;
+
       default:
         return false;
     }
+
     return true;
   };
 }

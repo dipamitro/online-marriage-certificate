@@ -1,77 +1,101 @@
 import type { AnyDeps } from "../types";
 
-/** Signing commands, isolated from other portal actions. */
+/**
+ * Handles Groom/Bride eSign (`esign`), Registrar appraisal acceptance (`accept`),
+ * reverting an application (`revert`), Registrar approval with eSign (`approve`),
+ * and OneID Vault delivery (`sendvault`).
+ */
 export function createSigningActions(dependencies: AnyDeps) {
-  return async function handleSigning(act: string, b: HTMLElement): Promise<boolean> {
-    const id = b.dataset["id"];
-    const top = () => window.scrollTo(0, 0);
-    switch (act) {
+  return async function handleSigning(action: string, button: HTMLElement): Promise<boolean> {
+    const applicationId = button.dataset["id"];
+    const scrollToTop = () => window.scrollTo(0, 0);
+
+    switch (action) {
       case "ekyc": {
-        const a = dependencies.appById(id);
-        if (a) dependencies.ekycModal(a, b.dataset["who"]);
+        const application = dependencies.appById(applicationId);
+        if (application) {
+          dependencies.ekycModal(application, button.dataset["who"]);
+        }
         break;
       }
+
       case "kfill": {
-        const n = b.dataset["n"] ?? "";
-        const nidEl = dependencies.$("#k-nid") as HTMLInputElement | null,
-          dobEl = dependencies.$("#k-dob") as HTMLInputElement | null;
-        if (nidEl) nidEl.value = n;
-        if (dobEl) dobEl.value = dependencies.PEOPLE[n] ? dependencies.PEOPLE[n].dob : "";
+        const nid = button.dataset["n"] ?? "";
+        const nidInput = dependencies.$("#k-nid") as HTMLInputElement | null;
+        const dobInput = dependencies.$("#k-dob") as HTMLInputElement | null;
+        if (nidInput) nidInput.value = nid;
+        if (dobInput) {
+          dobInput.value = dependencies.PEOPLE[nid] ? dependencies.PEOPLE[nid].dob : "";
+        }
         break;
       }
+
       case "esign": {
-        const a = dependencies.appById(id),
-          k = (b.dataset["who"] ?? "groom") as "groom" | "bride";
-        if (!a) break;
+        const application = dependencies.appById(applicationId);
+        const spouseRole = (button.dataset["who"] ?? "groom") as "groom" | "bride";
+        if (!application) break;
+
         dependencies.otpModal(
           "Accept with eSign",
-          `You're signing the marriage registration application ${a.appNo} as the ${k}.`,
-          a.f[k].mobile,
+          `You're signing the marriage registration application ${application.appNo} as the ${spouseRole}.`,
+          application.f[spouseRole].mobile,
           async () => {
-            const nidNorm = dependencies.toEn(a.f[k].nid).trim();
-            const U = dependencies.userOf(nidNorm),
-              O = dependencies.PEOPLE[nidNorm];
-            a.esign[k].ekyc =
-              U && U.ekyc && O
+            const normalizedNid = dependencies.toEn(application.f[spouseRole].nid).trim();
+            const userRecord = dependencies.userOf(normalizedNid);
+            const personRecord = dependencies.PEOPLE[normalizedNid];
+
+            application.esign[spouseRole].ekyc =
+              userRecord && userRecord.ekyc && personRecord
                 ? {
-                    ...U.ekyc,
-                    nameMatch: (a.f[k].nameEn || "").trim().toLowerCase() === O.en.toLowerCase(),
-                    oneName: O.en,
+                    ...userRecord.ekyc,
+                    nameMatch:
+                      (application.f[spouseRole].nameEn || "").trim().toLowerCase() ===
+                      personRecord.en.toLowerCase(),
+                    oneName: personRecord.en,
                   }
                 : null;
-            a.esign[k].sign = { at: dependencies.now(), serial: dependencies.serial() };
+
+            application.esign[spouseRole].sign = {
+              at: dependencies.now(),
+              serial: dependencies.serial(),
+            };
+
             dependencies.hist(
-              a,
-              a.f[k].nameEn,
+              application,
+              application.f[spouseRole].nameEn,
               "Accepted with eSign (identity verified by eKYC at sign-up)",
             );
-            if (a.esign.groom.sign && a.esign.bride.sign) {
-              a.status = "appraisal";
-              const R = dependencies.REGISTRARS[a.f.registrar];
-              if (R) {
+
+            // Once both Groom and Bride have signed, forward to the Marriage Registrar for appraisal
+            if (application.esign.groom.sign && application.esign.bride.sign) {
+              application.status = "appraisal";
+              const registrar = dependencies.REGISTRARS[application.f.registrar];
+              if (registrar) {
                 dependencies.pushMail(
-                  R.email,
-                  dependencies.regName(a.f.registrar),
-                  `New application for appraisal: ${a.appNo}`,
+                  registrar.email,
+                  dependencies.regName(application.f.registrar),
+                  `New application for appraisal: ${application.appNo}`,
                   [
-                    `The bride and groom have both eSigned application ${a.appNo} (${dependencies.coupleEn(a)}).`,
+                    `The bride and groom have both eSigned application ${application.appNo} (${dependencies.coupleEn(application)}).`,
                     "Please review and accept it, or revert it to the applicant.",
                   ],
-                  { type: "registrar", lic: a.f.registrar, appId: a.id },
+                  { type: "registrar", lic: application.f.registrar, appId: application.id },
                 );
               }
             }
+
             dependencies.UI.accept = false;
             if (dependencies.UI.portal === "applicant") {
               dependencies.UI.open.esign = null;
               dependencies.UI.open.applicant = null;
               dependencies.UI.page.applicant = "dash";
             }
+
             dependencies.save();
             dependencies.render();
-            window.scrollTo(0, 0);
+            scrollToTop();
             dependencies.toast(
-              a.status === "appraisal"
+              application.status === "appraisal"
                 ? "Signed. Both have signed; sent to the registrar."
                 : "Signed. Waiting for the other party.",
             );
@@ -79,78 +103,107 @@ export function createSigningActions(dependencies: AnyDeps) {
         );
         break;
       }
+
       case "accept": {
-        const a = dependencies.appById(id);
-        if (!a) break;
-        a.status = "approval";
-        a.reg.acceptedAt = dependencies.now();
+        const application = dependencies.appById(applicationId);
+        if (!application) break;
+
+        application.status = "approval";
+        application.reg.acceptedAt = dependencies.now();
         dependencies.hist(
-          a,
-          dependencies.regName(a.f.registrar),
+          application,
+          dependencies.regName(application.f.registrar),
           "Appraisal complete, application accepted",
         );
         dependencies.save();
         dependencies.render();
-        top();
+        scrollToTop();
         dependencies.toast("Accepted. You can now approve with eSign.");
         break;
       }
+
       case "revert": {
-        const a = dependencies.appById(id);
-        if (!a) break;
-        dependencies.modal(
-          `<h3>Revert to applicant</h3><p class="sub">Explain the confusion or problem. The applicant corrects it and submits again; the bride and groom sign again.</p><div class="fg" style="margin-top:12px"><label>Reason</label><textarea class="inp" id="m-rs"></textarea></div><p class="err" id="m-err"></p><div class="row"><button class="btn bs" data-act="mclose">Cancel</button><button class="btn br" data-act="mok">Revert</button></div>`,
-          () => {
-            const rsEl = dependencies.$("#m-rs") as HTMLTextAreaElement | null;
-            const t = (rsEl?.value ?? "").trim();
-            if (!t) return "Enter a reason.";
-            a.status = "reverted";
-            a.revertReason = t;
-            dependencies.hist(
-              a,
-              dependencies.regName(a.f.registrar),
-              "Reverted to applicant: " + t,
-            );
-            const acc = dependencies.accOf(a.owner);
-            dependencies.pushMail(
-              acc.email,
-              acc.name,
-              `Your application ${a.appNo} needs correction`,
-              [
-                `Dear ${acc.name},`,
-                `${dependencies.regName(a.f.registrar)} has reverted your marriage registration application with this note:`,
-                t,
-                "Please correct it and submit again.",
-              ],
-              { type: "applicant", uid: a.owner, appId: a.id },
-            );
-            dependencies.save();
-            dependencies.UI.open.registrar = null;
-            dependencies.render();
-            dependencies.toast("Reverted to applicant");
-            return "";
-          },
-        );
+        const application = dependencies.appById(applicationId);
+        if (!application) break;
+
+        const revertModalHtml = `
+          <h3>Revert to applicant</h3>
+          <p class="sub">
+            Explain the confusion or problem. The applicant corrects it and submits again; the bride and groom sign again.
+          </p>
+          <div class="fg" style="margin-top:12px">
+            <label>Reason</label>
+            <textarea class="inp" id="m-rs"></textarea>
+          </div>
+          <p class="err" id="m-err"></p>
+          <div class="row">
+            <button class="btn bs" data-act="mclose">Cancel</button>
+            <button class="btn br" data-act="mok">Revert</button>
+          </div>
+        `;
+
+        dependencies.modal(revertModalHtml, () => {
+          const reasonInput = dependencies.$("#m-rs") as HTMLTextAreaElement | null;
+          const revertReason = (reasonInput?.value ?? "").trim();
+          if (!revertReason) {
+            return "Enter a reason.";
+          }
+
+          application.status = "reverted";
+          application.revertReason = revertReason;
+          dependencies.hist(
+            application,
+            dependencies.regName(application.f.registrar),
+            "Reverted to applicant: " + revertReason,
+          );
+
+          const applicantAccount = dependencies.accOf(application.owner);
+          dependencies.pushMail(
+            applicantAccount.email,
+            applicantAccount.name,
+            `Your application ${application.appNo} needs correction`,
+            [
+              `Dear ${applicantAccount.name},`,
+              `${dependencies.regName(application.f.registrar)} has reverted your marriage registration application with this note:`,
+              revertReason,
+              "Please correct it and submit again.",
+            ],
+            { type: "applicant", uid: application.owner, appId: application.id },
+          );
+
+          dependencies.save();
+          dependencies.UI.open.registrar = null;
+          dependencies.render();
+          dependencies.toast("Reverted to applicant");
+          return "";
+        });
         break;
       }
+
       case "approve": {
-        const a = dependencies.appById(id);
-        if (!a) break;
-        const R = dependencies.REGISTRARS[a.f.registrar];
-        const RU = R ? dependencies.userOf(R.nid) : null;
-        a.reg.ekyc = RU && RU.ekyc ? { ...RU.ekyc } : null;
-        a.reg.acceptedAt = a.reg.acceptedAt || dependencies.now();
+        const application = dependencies.appById(applicationId);
+        if (!application) break;
+
+        const registrar = dependencies.REGISTRARS[application.f.registrar];
+        const registrarUser = registrar ? dependencies.userOf(registrar.nid) : null;
+        application.reg.ekyc =
+          registrarUser && registrarUser.ekyc ? { ...registrarUser.ekyc } : null;
+        application.reg.acceptedAt = application.reg.acceptedAt || dependencies.now();
+
         dependencies.otpModal(
           "Approve with eSign",
-          `Approving ${a.appNo} generates the Digital Nikahnama and the Marriage Certificate, each with the VDS, and sends both directly to the bride's and groom's OneID Vault.`,
-          R?.mobile ?? "",
+          `Approving ${application.appNo} generates the Digital Nikahnama and the Marriage Certificate, each with the VDS, and sends both directly to the bride's and groom's OneID Vault.`,
+          registrar?.mobile ?? "",
           async () => {
-            a.reg.sign = { at: dependencies.now(), serial: dependencies.serial() };
-            await dependencies.issue(a);
-            dependencies.sendToVault(a);
+            application.reg.sign = {
+              at: dependencies.now(),
+              serial: dependencies.serial(),
+            };
+            await dependencies.issue(application);
+            dependencies.sendToVault(application);
             dependencies.save();
             dependencies.render();
-            top();
+            scrollToTop();
             dependencies.toast(
               "Approved with eSign. Nikahnama and Marriage Certificate sent to the bride's and groom's OneID Vault.",
             );
@@ -158,19 +211,23 @@ export function createSigningActions(dependencies: AnyDeps) {
         );
         break;
       }
+
       case "sendvault": {
-        const a = dependencies.appById(id);
-        if (!a) break;
-        dependencies.sendToVault(a);
+        const application = dependencies.appById(applicationId);
+        if (!application) break;
+
+        dependencies.sendToVault(application);
         dependencies.save();
         dependencies.render();
-        top();
+        scrollToTop();
         dependencies.toast("Sent to the bride's and groom's OneID Vault");
         break;
       }
+
       default:
         return false;
     }
+
     return true;
   };
 }

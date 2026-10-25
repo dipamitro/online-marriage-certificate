@@ -1,32 +1,43 @@
 import type { AnyDeps } from "../types";
 
-/** Dialogs commands, isolated from other portal actions. */
+/**
+ * Handles modal dialog buttons: closing the modal (`mclose`) and confirming (`mok`).
+ */
 export function createDialogsActions(dependencies: AnyDeps) {
-  return async function handleDialogs(act: string, b: HTMLButtonElement): Promise<boolean> {
-    switch (act) {
+  return async function handleDialogs(action: string, button: HTMLButtonElement): Promise<boolean> {
+    switch (action) {
       case "mclose":
         dependencies.closeModal();
         break;
+
       case "mok": {
         if (!dependencies.mOk) break;
-        b.disabled = true;
+        button.disabled = true;
         try {
-          const r = await dependencies.mOk();
-          if (r === "pending") break;
-          if (r) {
-            const el = dependencies.$("#m-err") as HTMLElement | null;
-            if (el) el.textContent = r;
-            b.disabled = false;
-          } else dependencies.closeModal();
+          const validationErrorOrStatus = await dependencies.mOk();
+          if (validationErrorOrStatus === "pending") {
+            break;
+          }
+          if (validationErrorOrStatus) {
+            const errorElement = dependencies.$("#m-err") as HTMLElement | null;
+            if (errorElement) {
+              errorElement.textContent = validationErrorOrStatus;
+            }
+            button.disabled = false;
+          } else {
+            dependencies.closeModal();
+          }
         } catch (error) {
-          b.disabled = false;
+          button.disabled = false;
           throw error;
         }
         break;
       }
+
       default:
         return false;
     }
+
     return true;
   };
 }
