@@ -6,7 +6,7 @@
 export function PortalMountContainers() {
   return (
     <div className="relative min-h-screen w-full">
-      <div id="pills" role="navigation" aria-label="Portals" />
+      <div id="pills" role="navigation" aria-label="Portals" hidden />
       <div id="root" />
       <div className="modal" id="modal" hidden />
       <div id="toast" role="status" />

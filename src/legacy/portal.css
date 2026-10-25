@@ -6,7 +6,7 @@
   --g:#15803D;--gbg:#DCFCE7;--r:#DC2626;--rbg:#FEE2E2;--a:#B45309;--abg:#FEF3C7;--pur:#6D28D9;--purbg:#EDE9FE;--tel:#0F766E;--telbg:#CCFBF1;
   --rad:14px;--radsm:9px;
   --sh:0 1px 4px rgba(7,18,42,.07),0 1px 2px rgba(7,18,42,.04);--shm:0 4px 20px rgba(7,18,42,.11);--shl:0 8px 40px rgba(7,18,42,.14);
-  --sbw:248px;--tbh:62px;--pill:46px;
+  --sbw:248px;--tbh:62px;--pill:0px;
   --font:'Plus Jakarta Sans','Noto Sans Bengali',system-ui,sans-serif;--head:'Outfit','Noto Sans Bengali',sans-serif;--bnf:'Noto Sans Bengali','Plus Jakarta Sans',sans-serif;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
@@ -22,8 +22,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 h1,h2,h3{margin:0;line-height:1.25;font-family:var(--head)}
 p{margin:0}
 .bn{font-family:var(--bnf)}
-/* top pill bar */
-#pills{position:fixed;top:env(safe-area-inset-top,0px);left:0;right:0;height:var(--pill);background:#07122A;display:flex;align-items:center;justify-content:flex-start;gap:4px;z-index:300;padding:0 8px;overflow-x:auto;scrollbar-width:none}
+/* top pill bar (hidden) */
+#pills{display:none!important}
 #pills>:first-child{margin-left:auto}#pills>:last-child{margin-right:auto}
 #pills::-webkit-scrollbar{display:none}
 #pills button{border:0;background:none;color:#7A95C2;font-weight:600;font-size:12.5px;padding:7px 14px;border-radius:999px;cursor:pointer;white-space:nowrap;display:inline-flex;gap:6px;align-items:center}
@@ -643,7 +643,7 @@ body,body.p-wallet{background:#F5F8FF}
   --tx:#0B2149;--tx2:#3B5B8C;--tx3:#7E95B8;
   --ok:#1D4ED8;--okbg:#DBEAFE;--warn:#B45309;--warnbg:#FEF3C7;--bad:#B91C1C;--badbg:#FEE2E2;
   --rad:12px;--sh:0 1px 3px rgba(29,78,216,.07),0 6px 20px -14px rgba(11,33,73,.25);
-  --pill:46px;--sbw:250px;
+  --pill:0px;--sbw:250px;
   --font:'Plus Jakarta Sans','Noto Sans Bengali',system-ui,sans-serif;
   box-sizing:border-box;
 }

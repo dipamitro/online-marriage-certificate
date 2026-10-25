@@ -483,6 +483,10 @@ export function bootRegistration(options?: BootRegistrationOptions): Registratio
         "render",
         "rebuildFromEnl",
         "doLogin",
+        "ls",
+        "STORE",
+        "seed",
+        "seedSync",
       ]),
     ),
   );

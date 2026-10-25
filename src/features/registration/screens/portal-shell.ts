@@ -1,18 +1,8 @@
-import type { AnyDeps, EmailMessage } from "../types";
+import type { AnyDeps } from "../types";
 
 /**
- * Top navigation bar switcher pills displayed across all portals.
- */
-const TOP_BAR_PORTALS: Array<[string, string]> = [
-  ["home", "🔐 Sign in"],
-  ["wallet", "🪪 OneID Wallet"],
-  ["verify", "🛡️ Verify"],
-  ["inbox", "📧 Email"],
-];
-
-/**
- * Renders the top navigation bar (`#pills`) and mounts the active portal screen
- * into `#root` (or delegates to `#eroot` when `UI.portal === "enl"`).
+ * Renders the active portal screen into `#root`
+ * (or delegates to `#eroot` when `UI.portal === "enl"`).
  *
  * Dependencies: `$`, `S`, `UI`, `docPage`, `hydrateQR`, `inboxPage`, `loginPage`,
  * `rebuildFromEnl`, `roleHome`, `shell`, `verifyPage`, `walletLogin`, `walletShell`.
@@ -24,8 +14,8 @@ export function createScreensPortalShell(dependencies: AnyDeps) {
   const pubShell = (innerHtml: string): string => `<div class="pubwrap">${innerHtml}</div>`;
 
   /**
-   * Synchronizes the registrar directory from the Enlistment Engine, updates the
-   * top navigation pills, and renders the active portal screen into `#root`.
+   * Synchronizes the registrar directory from the Enlistment Engine and
+   * renders the active portal screen into `#root`.
    */
   function render(): void {
     dependencies.rebuildFromEnl();
@@ -33,36 +23,14 @@ export function createScreensPortalShell(dependencies: AnyDeps) {
     const activePortal: string = dependencies.UI.portal;
     document.body.className = "p-" + (activePortal === "enl" ? "registrar" : activePortal);
 
-    // 1. Render top navigation bar pills (#pills)
-    const signedInInboxEmail = dependencies.UI.inbox?.auth?.trim().toLowerCase();
-    const unreadEmailsCount = dependencies.S.emails.filter(
-      (email: EmailMessage) =>
-        !email.read &&
-        (!signedInInboxEmail ||
-          String(email.to || "")
-            .trim()
-            .toLowerCase() === signedInInboxEmail),
-    ).length;
-
+    // Ensure legacy top pill bar (#pills) stays empty and hidden
     const pillsContainer = dependencies.$("#pills") as HTMLElement | null;
     if (pillsContainer) {
-      const portalButtonsHtml = TOP_BAR_PORTALS.map(([portalKey, label]) => {
-        const isActive =
-          activePortal === portalKey || (activePortal === "doc" && portalKey === "inbox");
-        const unreadBadgeHtml =
-          portalKey === "inbox" && unreadEmailsCount
-            ? `<span class="bdg">${unreadEmailsCount}</span>`
-            : "";
-
-        return `<button class="${isActive ? "on" : ""}" data-act="portal" data-p="${portalKey}">${label}${unreadBadgeHtml}</button>`;
-      }).join("");
-
-      pillsContainer.innerHTML =
-        portalButtonsHtml +
-        `<button data-act="reset" title="Reset demo data">↺ Reset demo</button>`;
+      pillsContainer.innerHTML = "";
+      pillsContainer.hidden = true;
     }
 
-    // 2. Render active portal content (#root)
+    // Render active portal content (#root)
     const rootContainer = dependencies.$("#root") as HTMLElement | null;
     if (!rootContainer) return;
 
@@ -105,5 +73,5 @@ export function createScreensPortalShell(dependencies: AnyDeps) {
     window.OMRBridge?.onPortalChange?.(activePortal);
   }
 
-  return { PORTALS: TOP_BAR_PORTALS, render, pubShell };
+  return { PORTALS: [] as Array<[string, string]>, render, pubShell };
 }

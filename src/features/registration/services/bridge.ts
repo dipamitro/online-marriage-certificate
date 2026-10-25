@@ -60,6 +60,27 @@ export function createServicesBridge(dependencies: AnyDeps) {
       dependencies.save();
       dependencies.render();
     },
+    async resetDemo() {
+      dependencies.ls?.del(dependencies.STORE);
+      dependencies.rebuildFromEnl();
+      if (typeof dependencies.seedSync === "function") {
+        dependencies.seedSync();
+      }
+      if (typeof dependencies.seed === "function") {
+        await dependencies.seed();
+      }
+      dependencies.UI.auth = { applicant: null, esign: null, registrar: null, wallet: null };
+      dependencies.UI.open = { applicant: null, esign: null, registrar: null, wallet: null };
+      dependencies.UI.inbox = {
+        id: null,
+        auth: null,
+        emailInput: "",
+        passwordInput: "",
+        err: "",
+      };
+      dependencies.UI.draft = null;
+      dependencies.UI.errors = null;
+    },
     getPortal(): string {
       return dependencies.UI.portal;
     },

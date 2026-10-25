@@ -98,7 +98,8 @@ describe("Portal boot and lifecycle integration", () => {
     expect(document.querySelector("#root")?.innerHTML).toContain(
       "Verify a Nikahnama or Marriage Certificate",
     );
-    expect(document.querySelector("#pills")?.innerHTML).toContain("OneID Wallet");
+    expect(document.querySelector("#pills")?.innerHTML).toBe("");
+    expect((document.querySelector("#pills") as HTMLElement | null)?.hidden).toBe(true);
 
     await controller.ready;
     controller.dispose();
@@ -161,7 +162,9 @@ describe("Portal boot and lifecycle integration", () => {
       initialEnlRole: "admin",
     });
     await adminController.ready;
-    expect(document.querySelector("#eroot")?.innerHTML).toContain("Farhana Akter");
+    const adminHtml = document.querySelector("#eroot")?.innerHTML ?? "";
+    expect(adminHtml).toContain("Farhana Akter");
+    expect(adminHtml).toContain("↺ Reset demo");
     expect(window.ENLBridge?.getRole?.()).toBe("admin");
     adminController.dispose();
 
@@ -171,7 +174,9 @@ describe("Portal boot and lifecycle integration", () => {
       initialEnlRole: "super",
     });
     await superController.ready;
-    expect(document.querySelector("#eroot")?.innerHTML).toContain("Md. Rafiqul Islam");
+    const superHtml = document.querySelector("#eroot")?.innerHTML ?? "";
+    expect(superHtml).toContain("Md. Rafiqul Islam");
+    expect(superHtml).toContain("↺ Reset demo");
     expect(window.ENLBridge?.getRole?.()).toBe("super");
     superController.dispose();
   });
@@ -182,7 +187,7 @@ describe("Portal boot and lifecycle integration", () => {
 
     expect(window.OMRBridge).toBeDefined();
     expect(document.querySelector("#root")?.innerHTML).toContain("Sign in");
-    expect(document.querySelector("#pills")?.innerHTML).toContain("OneID Wallet");
+    expect(document.querySelector("#pills")?.innerHTML).toBe("");
 
     controller.dispose();
     expect(window.OMRBridge).toBeUndefined();
@@ -192,8 +197,7 @@ describe("Portal boot and lifecycle integration", () => {
     const controller = bootRegistration();
     await controller.ready;
 
-    const verifyTab = document.querySelector('[data-act="portal"][data-p="verify"]');
-    verifyTab?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    window.OMRBridge?.setPortal?.("verify");
     expect(document.querySelector("#root")?.innerHTML).toContain(
       "Verify a Nikahnama or Marriage Certificate",
     );
