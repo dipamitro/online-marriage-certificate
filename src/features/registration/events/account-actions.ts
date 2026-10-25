@@ -120,7 +120,6 @@ export function createAccountActions(dependencies: AnyDeps) {
           window.ENLBridge?.signIn(activeRole);
           dependencies.render();
           window.scrollTo(0, 0);
-          dependencies.toast("Signed in");
           break;
         }
 

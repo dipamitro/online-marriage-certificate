@@ -24,43 +24,33 @@ export function createApplicationActions(dependencies: AnyDeps) {
         break;
 
       case "demofill": {
-        dependencies.UI.draft.f = dependencies.demoForm();
         const currentApplicantNid: string | null = dependencies.UI.auth.applicant;
         const currentUser = currentApplicantNid ? dependencies.userOf(currentApplicantNid) : null;
         const currentPerson = currentApplicantNid ? dependencies.PEOPLE[currentApplicantNid] : null;
+        const currentEmail =
+          currentUser?.email ||
+          (currentApplicantNid && typeof dependencies.demoEmail === "function"
+            ? dependencies.demoEmail(currentApplicantNid)
+            : "");
 
-        // Preserve the signed-in applicant's real identity when they fill demo data
-        if (
-          currentApplicantNid &&
-          currentApplicantNid !== "5555555555" &&
-          currentApplicantNid !== dependencies.UI.draft.f.bride.nid &&
-          currentUser
-        ) {
-          dependencies.UI.draft.f.groom = {
-            ...dependencies.UI.draft.f.groom,
-            nameEn: currentUser.name || currentPerson?.en || dependencies.UI.draft.f.groom.nameEn,
-            nameBn:
-              currentUser.nameBn ||
-              currentPerson?.bn ||
-              currentUser.name ||
-              dependencies.UI.draft.f.groom.nameBn,
-            nid: currentApplicantNid,
-            dob: currentUser.dob || currentPerson?.dob || dependencies.UI.draft.f.groom.dob,
-            email: currentUser.email || dependencies.UI.draft.f.groom.email,
-            mobile: currentUser.mobile || dependencies.UI.draft.f.groom.mobile,
-          };
-        }
-
-        dependencies.UI.draft.f.applicantRole =
-          dependencies.toEn(dependencies.UI.draft.f.groom.nid) === currentApplicantNid
-            ? "বর"
-            : dependencies.toEn(dependencies.UI.draft.f.bride.nid) === currentApplicantNid
-              ? "কনে"
-              : "প্রতিনিধি";
+        dependencies.UI.draft.f = dependencies.demoForm({
+          nid: currentApplicantNid,
+          email: currentEmail,
+          nameEn: currentUser?.name || currentPerson?.en || null,
+          nameBn: currentUser?.nameBn || currentPerson?.bn || currentUser?.name || null,
+          dob: currentUser?.dob || currentPerson?.dob || null,
+          mobile:
+            currentUser?.mobile ||
+            (currentApplicantNid && typeof dependencies.demoMobile === "function"
+              ? dependencies.demoMobile(currentApplicantNid)
+              : null),
+          gender: currentUser?.gender || currentPerson?.g || null,
+          preferredRole: dependencies.UI.draft?.f?.applicantRole || null,
+          existingApps: dependencies.S?.apps || [],
+        });
 
         dependencies.UI.errors = null;
         dependencies.render();
-        dependencies.toast("All 7 sections filled with demo data");
         break;
       }
 
@@ -171,7 +161,7 @@ export function createApplicationActions(dependencies: AnyDeps) {
           dependencies.sendInvites(application, true);
           dependencies.save();
           dependencies.render();
-          dependencies.toast("Invitation emails sent again");
+          dependencies.toast("Invitation resent");
         }
         break;
       }

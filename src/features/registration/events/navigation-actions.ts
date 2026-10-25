@@ -39,9 +39,6 @@ export function createNavigationActions(dependencies: AnyDeps) {
         dependencies.UI.open[targetPortal] = null;
         dependencies.render();
         scrollToTop();
-        if (targetPortal === "esign") {
-          dependencies.toast("Signed in with OneID");
-        }
         break;
       }
 
@@ -168,7 +165,7 @@ export function createNavigationActions(dependencies: AnyDeps) {
           dependencies.UI.draft = null;
           dependencies.UI.errors = null;
           dependencies.render();
-          dependencies.toast("Demo data restored");
+          dependencies.toast("Demo reset");
           return true;
         })();
 

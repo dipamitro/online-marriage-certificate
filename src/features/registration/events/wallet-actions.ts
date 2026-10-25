@@ -21,7 +21,7 @@ export function createWalletActions(dependencies: AnyDeps) {
         if (["vault", "home"].includes(b.dataset["k"] ?? "")) {
           dependencies.UI.wallet = { cat: null, doc: null, sb: false };
           dependencies.render();
-        } else dependencies.toast("Demo: only Document Vaults is active in this prototype");
+        } else dependencies.toast("Document Vaults only");
         break;
       case "wcat":
         dependencies.UI.wallet.cat = b.dataset["k"] || null;
@@ -61,13 +61,11 @@ export function createWalletActions(dependencies: AnyDeps) {
           (m: EmailMessage) =>
             m.link.type === "vault" && m.link.nid === dependencies.UI.auth.wallet,
         ).length;
-        dependencies.toast(
-          n ? `${n} marriage certificate notification${n > 1 ? "s" : ""}` : "No new notifications",
-        );
+        dependencies.toast(n ? `${n} notification${n > 1 ? "s" : ""}` : "No notifications");
         break;
       }
       case "wdemo":
-        dependencies.toast("Demo document: only Marriage Certificate is live in this prototype");
+        dependencies.toast("Marriage Certificate only");
         break;
       default:
         return false;

@@ -35,15 +35,14 @@ export function createServicesPdf(dependencies: AnyDeps) {
   async function downloadPdf(a: ApplicationRecord, kind?: string): Promise<void> {
     const isC = kind === "cert" && a.cert;
     if (typeof html2canvas !== "function" || !window.jspdf) {
-      dependencies.toast("The PDF tools didn't load. Check your connection.");
+      dependencies.toast("PDF tools unavailable");
       return;
     }
     const dl = await dlCap();
     if (!dl) {
-      dependencies.toast("Downloads aren't available in this view.");
+      dependencies.toast("Download unavailable");
       return;
     }
-    dependencies.toast("Preparing PDF…");
     const st = dependencies.$("#pdfStage") as HTMLElement | null;
     if (!st) return;
     st.innerHTML = isC ? dependencies.certHTML(a) : dependencies.docHTML(a);
@@ -86,7 +85,7 @@ export function createServicesPdf(dependencies: AnyDeps) {
     } catch (e: unknown) {
       st.innerHTML = "";
       if (e && typeof e === "object" && "code" in e && e.code === "declined") return;
-      dependencies.toast("The PDF couldn't be saved here.");
+      dependencies.toast("Could not save PDF");
     }
   }
   return {

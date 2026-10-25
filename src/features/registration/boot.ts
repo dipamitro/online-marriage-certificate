@@ -538,6 +538,8 @@ export function bootRegistration(options?: BootRegistrationOptions): Registratio
         "startDraft",
         "appById",
         "demoForm",
+        "demoEmail",
+        "demoMobile",
         "toEn",
         "$",
         "tabHTML",

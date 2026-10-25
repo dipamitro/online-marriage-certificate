@@ -254,4 +254,92 @@ describe("Portal boot and lifecycle integration", () => {
 
     controller.dispose();
   });
+
+  it("autofills matching groom and bride couples based on the logged-in user's role and email", async () => {
+    const controller = bootRegistration({
+      initialPortal: "home",
+      initialSignInRole: "applicant",
+    });
+    await controller.ready;
+
+    const signInAndFillDemo = (email: string) => {
+      // Sign out if currently logged in
+      document
+        .querySelector('[data-act="logout"]')
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+      const idInput = document.querySelector<HTMLInputElement>('[data-homeid="1"]');
+      const pwInput = document.querySelector<HTMLInputElement>('[data-homepw="1"]');
+      if (idInput && pwInput) {
+        idInput.value = email;
+        idInput.dispatchEvent(new Event("input", { bubbles: true }));
+        pwInput.value = "demo-pass";
+        pwInput.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      document
+        .querySelector('[data-act="homesignin"]')
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+      // Start new application and click "Fill with demo data"
+      document
+        .querySelector('[data-act="newapp"]')
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      document
+        .querySelector('[data-act="demofill"]')
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+      // Read groom (tab 1) and bride (tab 2) details
+      document
+        .querySelector('[data-act="gotab"][data-t="1"]')
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      const groomNameEn =
+        document.querySelector<HTMLInputElement>('[data-b="groom.nameEn"]')?.value ?? "";
+      const groomEmail =
+        document.querySelector<HTMLInputElement>('[data-b="groom.email"]')?.value ?? "";
+
+      document
+        .querySelector('[data-act="gotab"][data-t="2"]')
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      const brideNameEn =
+        document.querySelector<HTMLInputElement>('[data-b="bride.nameEn"]')?.value ?? "";
+      const brideEmail =
+        document.querySelector<HTMLInputElement>('[data-b="bride.email"]')?.value ?? "";
+
+      return { groomNameEn, groomEmail, brideNameEn, brideEmail };
+    };
+
+    // 1. Abdul Karim (Groom) -> Groom: Abdul Karim, Bride: Farzana Akter
+    expect(signInAndFillDemo("abdul.karim@mail.com")).toEqual({
+      groomNameEn: "Abdul Karim",
+      groomEmail: "abdul.karim@mail.com",
+      brideNameEn: "Farzana Akter",
+      brideEmail: "farzana.akter@mail.com",
+    });
+
+    // 2. Farzana Akter (Bride) -> Bride: Farzana Akter, Groom: Abdul Karim
+    expect(signInAndFillDemo("farzana.akter@mail.com")).toEqual({
+      groomNameEn: "Abdul Karim",
+      groomEmail: "abdul.karim@mail.com",
+      brideNameEn: "Farzana Akter",
+      brideEmail: "farzana.akter@mail.com",
+    });
+
+    // 3. Arif Rahman (Groom) -> Groom: Arif Rahman, Bride: Laboni Islam
+    expect(signInAndFillDemo("arif.rahman@mail.com")).toEqual({
+      groomNameEn: "Arif Rahman",
+      groomEmail: "arif.rahman@mail.com",
+      brideNameEn: "Laboni Islam",
+      brideEmail: "laboni.islam@mail.com",
+    });
+
+    // 4. Laboni Islam (Bride) -> Bride: Laboni Islam, Groom: Arif Rahman
+    expect(signInAndFillDemo("laboni.islam@mail.com")).toEqual({
+      groomNameEn: "Arif Rahman",
+      groomEmail: "arif.rahman@mail.com",
+      brideNameEn: "Laboni Islam",
+      brideEmail: "laboni.islam@mail.com",
+    });
+
+    controller.dispose();
+  });
 });

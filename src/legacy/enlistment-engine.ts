@@ -1617,11 +1617,11 @@ export function bootEnlistment(): void {
     toastT: ReturnType<typeof setTimeout> | undefined;
   function toast(m: string): void {
     const t = $("#etoast");
-    if (!t) return;
+    if (!t || !m) return;
     t.textContent = m;
     t.classList.add("show");
     if (toastT) clearTimeout(toastT);
-    toastT = setTimeout(() => t.classList.remove("show"), 2600);
+    toastT = setTimeout(() => t.classList.remove("show"), 1500);
   }
   function modal(html: string, ok: (() => string | Promise<string>) | null, wide?: boolean): void {
     const m = $("#emodal");
@@ -1704,16 +1704,17 @@ export function bootEnlistment(): void {
           UI.login["applicant"] = n;
           UI.page["applicant"] = "dash";
           render();
-          toast("Account verified. You can now apply.");
+          toast("Account verified");
         }, 2000);
         return "pending";
       },
     );
   }
   function otpModal(title: string, text: string, onOk: () => Promise<void>): void {
-    const code = otpCode();
+    // const code = otpCode();
+    const code = "000000";
     modal(
-      `<h3>${title}</h3><p class="sub">${text}</p><div class="fg" style="margin-top:12px"><label>Code sent by SMS to your registered mobile</label><input class="inp otp" id="m-otp" inputmode="numeric" maxlength="6"><div class="demo">Demo1 code: ${code}</div></div><p class="err" id="m-err" hidden></p><div class="row"><button class="btn" data-act="mclose">Cancel</button><button class="btn bp" data-act="mok">Sign and approve</button></div>`,
+      `<h3>${title}</h3><p class="sub">${text}</p><div class="fg" style="margin-top:12px"><label>Code sent by SMS to your registered mobile</label><input class="inp otp" id="m-otp" inputmode="numeric" maxlength="6"><div class="demo">Demo code: ${code}</div></div><p class="err" id="m-err" hidden></p><div class="row"><button class="btn" data-act="mclose">Cancel</button><button class="btn bp" data-act="mok">Sign and approve</button></div>`,
       async () => {
         const otpEl = $("#m-otp") as HTMLInputElement | null;
         if ((otpEl?.value.trim() ?? "") !== code) return "That code doesn't match.";
@@ -1877,7 +1878,6 @@ export function bootEnlistment(): void {
         UI.open = null;
         render();
         top();
-        toast("Signed in");
         break;
       }
       case "logout": {
@@ -1989,7 +1989,6 @@ export function bootEnlistment(): void {
         d.declare = true;
         UI.errs = null;
         render();
-        toast("Demo data filled");
         break;
       }
       case "updoc":
@@ -2141,7 +2140,7 @@ export function bootEnlistment(): void {
             save();
             render();
             top();
-            toast("Approved. Licence issued and sent to OneID Wallet.");
+            toast("Approved & licence issued");
             const bridge = B();
             if (bridge) bridge.refresh();
           },
@@ -2338,7 +2337,7 @@ export function bootEnlistment(): void {
           errs: null,
         });
         render();
-        toast("Demo data restored");
+        toast("Demo reset");
         break;
     }
   };

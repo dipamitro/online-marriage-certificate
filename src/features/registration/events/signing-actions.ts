@@ -95,9 +95,7 @@ export function createSigningActions(dependencies: AnyDeps) {
             dependencies.render();
             scrollToTop();
             dependencies.toast(
-              application.status === "appraisal"
-                ? "Signed. Both have signed; sent to the registrar."
-                : "Signed. Waiting for the other party.",
+              application.status === "appraisal" ? "Signed & sent to registrar" : "Signed",
             );
           },
         );
@@ -118,7 +116,7 @@ export function createSigningActions(dependencies: AnyDeps) {
         dependencies.save();
         dependencies.render();
         scrollToTop();
-        dependencies.toast("Accepted. You can now approve with eSign.");
+        dependencies.toast("Accepted");
         break;
       }
 
@@ -204,9 +202,7 @@ export function createSigningActions(dependencies: AnyDeps) {
             dependencies.save();
             dependencies.render();
             scrollToTop();
-            dependencies.toast(
-              "Approved with eSign. Nikahnama and Marriage Certificate sent to the bride's and groom's OneID Vault.",
-            );
+            dependencies.toast("Approved & sent to OneID Vault");
           },
         );
         break;
@@ -220,7 +216,7 @@ export function createSigningActions(dependencies: AnyDeps) {
         dependencies.save();
         dependencies.render();
         scrollToTop();
-        dependencies.toast("Sent to the bride's and groom's OneID Vault");
+        dependencies.toast("Sent to OneID Vault");
         break;
       }
 

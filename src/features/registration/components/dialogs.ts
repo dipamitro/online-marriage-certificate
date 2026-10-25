@@ -26,12 +26,12 @@ export function createComponentsDialogs(dependencies: AnyDeps) {
    */
   function toast(message: string): void {
     const toastEl = dependencies.$("#toast") as HTMLElement | null;
-    if (!toastEl) return;
+    if (!toastEl || !message) return;
 
     toastEl.textContent = message;
     toastEl.classList.add("show");
     clearTimeout(toastTimeout);
-    toastTimeout = dependencies.lifecycle.timeout(() => toastEl.classList.remove("show"), 2600);
+    toastTimeout = dependencies.lifecycle.timeout(() => toastEl.classList.remove("show"), 1500);
   }
 
   /**
@@ -178,7 +178,7 @@ export function createComponentsDialogs(dependencies: AnyDeps) {
           dependencies.save();
           closeModal();
           dependencies.render();
-          toast("eKYC complete. You can now eSign.");
+          toast("eKYC verified");
         }
       };
 
@@ -205,7 +205,7 @@ export function createComponentsDialogs(dependencies: AnyDeps) {
       <div class="fg" style="margin-top:14px">
         <label>Code sent by SMS to mobile ending ${lastThreeDigits}</label>
         <input class="inp otp" id="m-otp" inputmode="numeric" maxlength="6">
-        <div class="demo-code">Demo1 code: ${generatedOtpCode}</div>
+        <div class="demo-code">Demo code: ${generatedOtpCode}</div>
       </div>
       <p class="err" id="m-err"></p>
       <div class="row">
