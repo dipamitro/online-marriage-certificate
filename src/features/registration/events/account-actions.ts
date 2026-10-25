@@ -132,7 +132,7 @@ export function createAccountActions(dependencies: AnyDeps) {
         const digitsOnly = identifierInput.replace(/\D/g, "");
         const normalizedMobile = digitsOnly.length === 10 ? "0" + digitsOnly : digitsOnly;
 
-        const matchedNid = Object.keys(dependencies.S.users).find((nid) => {
+        let matchedNid = Object.keys(dependencies.S.users).find((nid) => {
           const userRecord = dependencies.S.users[nid];
           if (!allowedUserRoles.includes(userRecord.role)) return false;
 
@@ -145,6 +145,35 @@ export function createAccountActions(dependencies: AnyDeps) {
 
           return emailMatches || mobileMatches || nidMatches;
         });
+
+        // Dynamic demo account support for Laboni Islam without altering OneID Wallet account list
+        if (
+          !matchedNid &&
+          activeRole === "applicant" &&
+          (identifierInput === "laboni.islam@mail.com" ||
+            normalizedMobile === "01811000104" ||
+            identifierInput === "8223456789")
+        ) {
+          matchedNid = "8223456789";
+          if (!dependencies.S.users[matchedNid]) {
+            dependencies.S.users[matchedNid] = {
+              nid: matchedNid,
+              role: "Applicant",
+              name: "Laboni Islam",
+              nameBn: "লাবণী ইসলাম",
+              dob: "1999-10-03",
+              gender: "F",
+              email: "laboni.islam@mail.com",
+              mobile: "01811000104",
+              ekyc: {
+                at: dependencies.now ? dependencies.now() : "2026-08-01T10:30:00",
+                score: 98.2,
+              },
+              at: dependencies.now ? dependencies.now() : "2026-08-01T10:31:00",
+              hiddenFromWallet: true,
+            };
+          }
+        }
 
         if (!matchedNid) {
           homeState.err =

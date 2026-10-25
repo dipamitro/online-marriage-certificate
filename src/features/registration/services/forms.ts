@@ -189,7 +189,7 @@ export const DEMO_COUPLES: DemoCoupleDefinition[] = [
         BANANI_ADDRESS,
       ),
       dob: "1999-10-03",
-      nid: "8123456789",
+      nid: "8223456789",
       marital: "কুমারী",
       mobile: "01811000104",
       email: "laboni.islam@mail.com",
@@ -258,10 +258,10 @@ export const DEMO_COUPLES: DemoCoupleDefinition[] = [
         "Rowshan Ara",
         BANANI_ADDRESS,
       ),
-      dob: "1998-11-14",
-      nid: "8223456789",
+      dob: "1999-10-03",
+      nid: "8123456789",
       marital: "কুমারী",
-      mobile: "01811000108",
+      mobile: "01811000104",
       email: "sadia.islam@mail.com",
     },
   },
@@ -455,10 +455,7 @@ export function resolveDemoCoupleForUser(context?: DemoFormUserContext): {
   };
 }
 
-/**
- * Form factory for blank and demo-filled marriage registration applications.
- * Dependencies: `C17OPTS`, `addDays`, `today`.
- */
+/** services/forms. Dependencies: C17OPTS, addDays, today. */
 export function createServicesForms(dependencies: AnyDeps) {
   const addr = (): AddressInfo => ({
     houseBn: "",
@@ -471,7 +468,6 @@ export function createServicesForms(dependencies: AnyDeps) {
     uni: "",
     ward: "",
   });
-
   const person0 = (): PersonFormInfo => ({
     nameBn: "",
     nameEn: "",
@@ -481,7 +477,6 @@ export function createServicesForms(dependencies: AnyDeps) {
     motherEn: "",
     addr: addr(),
   });
-
   const personF = (): SpouseFormInfo => ({
     ...person0(),
     dob: "",
@@ -490,7 +485,6 @@ export function createServicesForms(dependencies: AnyDeps) {
     mobile: "",
     email: "",
   });
-
   const blankForm = (): ApplicationForm => ({
     type: "muslim",
     loc: { div: "", dist: "", upz: "", uni: "", ward: "" },
@@ -528,7 +522,8 @@ export function createServicesForms(dependencies: AnyDeps) {
   });
 
   function demoForm(userContext?: DemoFormUserContext): ApplicationForm {
-    const resolvedCouple = resolveDemoCoupleForUser(userContext);
+    const isDemofill = Boolean(userContext && (userContext.email || userContext.nid));
+    const resolvedCouple = isDemofill ? resolveDemoCoupleForUser(userContext) : null;
     const form = blankForm();
 
     form.loc = {
@@ -539,9 +534,43 @@ export function createServicesForms(dependencies: AnyDeps) {
       ward: "ওয়ার্ড ০১",
     };
     form.registrar = "NR-DHK-0377";
-    form.applicantRole = resolvedCouple.applicantRole;
-    form.groom = resolvedCouple.groom;
-    form.bride = resolvedCouple.bride;
+    form.applicantRole = resolvedCouple ? resolvedCouple.applicantRole : "";
+    form.groom = resolvedCouple
+      ? resolvedCouple.groom
+      : {
+          ...createPerson(
+            "তানভীর হাসান",
+            "Tanvir Hasan",
+            "আব্দুল হাসান",
+            "Abdul Hasan",
+            "রোকেয়া বেগম",
+            "Rokeya Begum",
+            SAVAR_HOME_ADDRESS,
+          ),
+          dob: "1994-03-12",
+          nid: "1990123456",
+          marital: "অবিবাহিত",
+          mobile: "01712345601",
+          email: "tanvir.hasan@mail.com",
+        };
+    form.bride = resolvedCouple
+      ? resolvedCouple.bride
+      : {
+          ...createPerson(
+            "নুসরাত জাহান",
+            "Nusrat Jahan",
+            "মিজানুর রহমান",
+            "Mizanur Rahman",
+            "শাহানা পারভীন",
+            "Shahana Parvin",
+            DHANMONDI_ADDRESS,
+          ),
+          dob: "1998-07-21",
+          nid: "2001987654",
+          marital: "কুমারী",
+          mobile: "01812345602",
+          email: "nusrat.jahan@mail.com",
+        };
 
     form.ukil = {
       appointed: "yes",
@@ -678,10 +707,11 @@ export function createServicesForms(dependencies: AnyDeps) {
       regDate: dependencies.today(),
       regTime: "12:00",
       pay: "online",
-      contact:
-        resolvedCouple.applicantRole === "কনে"
+      contact: resolvedCouple
+        ? resolvedCouple.applicantRole === "কনে"
           ? resolvedCouple.bride.mobile
-          : resolvedCouple.groom.mobile,
+          : resolvedCouple.groom.mobile
+        : "01712587667",
     };
 
     return form;

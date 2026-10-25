@@ -217,7 +217,9 @@ export function createScreensSignIn(dependencies: AnyDeps) {
    * Renders the account `<select>` dropdown for secondary portal login screens.
    */
   function userOptions(portalKey: string): string {
-    const userNids = Object.keys(dependencies.S.users);
+    const userNids = Object.keys(dependencies.S.users).filter(
+      (nid) => portalKey !== "wallet" || !dependencies.S.users[nid]?.hiddenFromWallet,
+    );
 
     if (!userNids.includes(dependencies.UI.login[portalKey])) {
       dependencies.UI.login[portalKey] = userNids[0] || "";
