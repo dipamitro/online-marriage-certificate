@@ -98,7 +98,7 @@ describe("Portal boot and lifecycle integration", () => {
     expect(document.querySelector("#root")?.innerHTML).toContain(
       "Verify a Nikahnama or Marriage Certificate",
     );
-    expect(document.querySelector("#pills")?.innerHTML).toContain("OneID Wallet");
+    expect(document.querySelector("#pills")?.innerHTML).not.toContain("OneID Wallet");
 
     await controller.ready;
     controller.dispose();
@@ -182,7 +182,7 @@ describe("Portal boot and lifecycle integration", () => {
 
     expect(window.OMRBridge).toBeDefined();
     expect(document.querySelector("#root")?.innerHTML).toContain("Sign in");
-    expect(document.querySelector("#pills")?.innerHTML).toContain("OneID Wallet");
+    expect(document.querySelector("#pills")?.innerHTML).not.toContain("OneID Wallet");
 
     controller.dispose();
     expect(window.OMRBridge).toBeUndefined();
@@ -341,5 +341,36 @@ describe("Portal boot and lifecycle integration", () => {
     });
 
     controller.dispose();
+  });
+  it("removes TOP_BAR_PORTALS and only renders Reset demo on admin and super admin portals", async () => {
+    // 1. Citizen / Applicant portal has no TOP_BAR_PORTALS and no Reset demo
+    const citizenController = bootRegistration({
+      initialPortal: "home",
+      initialSignInRole: "applicant",
+    });
+    await citizenController.ready;
+    expect(document.querySelector("#pills")?.innerHTML).not.toContain("OneID Wallet");
+    expect(document.querySelector("#pills")?.innerHTML).not.toContain("Reset demo");
+    citizenController.dispose();
+
+    // 2. Admin portal shows Reset demo
+    const adminController = bootRegistration({
+      initialPortal: "enl",
+      initialEnlRole: "admin",
+    });
+    await adminController.ready;
+    expect(document.querySelector("#pills")?.innerHTML).toContain("Reset demo");
+    expect(document.querySelector("#pills")?.innerHTML).not.toContain("OneID Wallet");
+    adminController.dispose();
+
+    // 3. Super admin portal shows Reset demo
+    const superController = bootRegistration({
+      initialPortal: "enl",
+      initialEnlRole: "super",
+    });
+    await superController.ready;
+    expect(document.querySelector("#pills")?.innerHTML).toContain("Reset demo");
+    expect(document.querySelector("#pills")?.innerHTML).not.toContain("OneID Wallet");
+    superController.dispose();
   });
 });

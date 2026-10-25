@@ -1,18 +1,16 @@
-import type { AnyDeps, EmailMessage } from "../types";
+import type { AnyDeps } from "../types";
 
 /**
- * Top navigation bar switcher pills displayed across all portals.
+ * Top navigation bar switcher pills have been removed in favor of dedicated routes.
+ * Kept as an empty array for backward compatibility with existing callers.
  */
-const TOP_BAR_PORTALS: Array<[string, string]> = [
-  ["home", "🔐 Sign in"],
-  ["wallet", "🪪 OneID Wallet"],
-  ["verify", "🛡️ Verify"],
-  ["inbox", "📧 Email"],
-];
+const TOP_BAR_PORTALS: Array<[string, string]> = [];
 
 /**
- * Renders the top navigation bar (`#pills`) and mounts the active portal screen
+ * Manages the top navigation container (`#pills`) and mounts the active portal screen
  * into `#root` (or delegates to `#eroot` when `UI.portal === "enl"`).
+ *
+ * Only the `↺ Reset demo` button appears on the Admin and Super Admin portals.
  *
  * Dependencies: `$`, `S`, `UI`, `docPage`, `hydrateQR`, `inboxPage`, `loginPage`,
  * `rebuildFromEnl`, `roleHome`, `shell`, `verifyPage`, `walletLogin`, `walletShell`.
@@ -25,7 +23,7 @@ export function createScreensPortalShell(dependencies: AnyDeps) {
 
   /**
    * Synchronizes the registrar directory from the Enlistment Engine, updates the
-   * top navigation pills, and renders the active portal screen into `#root`.
+   * top navigation bar, and renders the active portal screen into `#root`.
    */
   function render(): void {
     dependencies.rebuildFromEnl();
@@ -33,33 +31,28 @@ export function createScreensPortalShell(dependencies: AnyDeps) {
     const activePortal: string = dependencies.UI.portal;
     document.body.className = "p-" + (activePortal === "enl" ? "registrar" : activePortal);
 
-    // 1. Render top navigation bar pills (#pills)
-    const signedInInboxEmail = dependencies.UI.inbox?.auth?.trim().toLowerCase();
-    const unreadEmailsCount = dependencies.S.emails.filter(
-      (email: EmailMessage) =>
-        !email.read &&
-        (!signedInInboxEmail ||
-          String(email.to || "")
-            .trim()
-            .toLowerCase() === signedInInboxEmail),
-    ).length;
+    // Determine whether the current view is the Admin or Super Admin portal
+    const currentEnlRole = window.ENLBridge?.getRole?.();
+    const isAdminOrSuperAdmin =
+      activePortal === "admin" ||
+      activePortal === "super" ||
+      (activePortal === "enl" && (currentEnlRole === "admin" || currentEnlRole === "super")) ||
+      (activePortal === "home" &&
+        (dependencies.UI.home?.role === "admin" || dependencies.UI.home?.role === "super"));
 
+    // 1. Render top bar (#pills): TOP_BAR_PORTALS removed; only Reset demo appears on admin and super admin portal
     const pillsContainer = dependencies.$("#pills") as HTMLElement | null;
     if (pillsContainer) {
-      const portalButtonsHtml = TOP_BAR_PORTALS.map(([portalKey, label]) => {
-        const isActive =
-          activePortal === portalKey || (activePortal === "doc" && portalKey === "inbox");
-        const unreadBadgeHtml =
-          portalKey === "inbox" && unreadEmailsCount
-            ? `<span class="bdg">${unreadEmailsCount}</span>`
-            : "";
-
-        return `<button class="${isActive ? "on" : ""}" data-act="portal" data-p="${portalKey}">${label}${unreadBadgeHtml}</button>`;
-      }).join("");
-
-      pillsContainer.innerHTML =
-        portalButtonsHtml +
-        `<button data-act="reset" title="Reset demo data">↺ Reset demo</button>`;
+      if (isAdminOrSuperAdmin) {
+        pillsContainer.innerHTML =
+          `<button data-act="reset" title="Reset demo data">↺ Reset demo</button>`;
+        pillsContainer.style.display = "";
+        document.documentElement.style.setProperty("--pill", "46px");
+      } else {
+        pillsContainer.innerHTML = "";
+        pillsContainer.style.display = "none";
+        document.documentElement.style.setProperty("--pill", "0px");
+      }
     }
 
     // 2. Render active portal content (#root)
