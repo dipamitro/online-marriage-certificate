@@ -6,7 +6,7 @@ import type { AnyDeps } from "../types";
  * and OneID Vault delivery (`sendvault`).
  */
 export function createSigningActions(dependencies: AnyDeps) {
-  return async function handleSigning(action: string, button: HTMLElement): Promise<boolean> {
+  return function handleSigning(action: string, button: HTMLElement): boolean {
     const applicationId = button.dataset["id"];
     const scrollToTop = () => window.scrollTo(0, 0);
 

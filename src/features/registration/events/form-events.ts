@@ -14,6 +14,16 @@ export function createEventsFormEvents(dependencies: AnyDeps) {
       dependencies.UI.home.pw = t.value;
       return;
     }
+    if (t.dataset["mailid"]) {
+      dependencies.UI.inbox.emailInput = t.value;
+      dependencies.UI.inbox.err = "";
+      return;
+    }
+    if (t.dataset["mailpw"]) {
+      dependencies.UI.inbox.passwordInput = t.value;
+      dependencies.UI.inbox.err = "";
+      return;
+    }
     if (dependencies.UI.onb && t.dataset["ob"]) {
       dependencies.UI.onb[t.dataset["ob"]] = t.value;
       dependencies.UI.onb.err = "";

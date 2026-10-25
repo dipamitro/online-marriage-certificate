@@ -494,8 +494,14 @@ export interface RegistrationUIState {
   tab: number;
   /** Validation errors `[tabIndex, errorMessage]` for the current draft */
   errors: Array<[number, string]> | null;
-  /** Currently selected email in `/inbox` */
-  inbox: { id: string | null };
+  /** State of the Email Inbox (`/inbox`), including per-user email sign-in */
+  inbox: {
+    id: string | null;
+    auth?: string | null;
+    emailInput?: string;
+    passwordInput?: string;
+    err?: string;
+  };
   /** State of the Universal Verifier on `/verify` */
   verify: { input: string; result: VerifyResult | null };
   /** Application ID being viewed in full-page document preview (`doc`) */

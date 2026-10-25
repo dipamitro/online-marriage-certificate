@@ -34,8 +34,14 @@ export function createScreensPortalShell(dependencies: AnyDeps) {
     document.body.className = "p-" + (activePortal === "enl" ? "registrar" : activePortal);
 
     // 1. Render top navigation bar pills (#pills)
+    const signedInInboxEmail = dependencies.UI.inbox?.auth?.trim().toLowerCase();
     const unreadEmailsCount = dependencies.S.emails.filter(
-      (email: EmailMessage) => !email.read,
+      (email: EmailMessage) =>
+        !email.read &&
+        (!signedInInboxEmail ||
+          String(email.to || "")
+            .trim()
+            .toLowerCase() === signedInInboxEmail),
     ).length;
 
     const pillsContainer = dependencies.$("#pills") as HTMLElement | null;
@@ -79,7 +85,9 @@ export function createScreensPortalShell(dependencies: AnyDeps) {
     } else if (activePortal === "verify") {
       screenHtml = pubShell(dependencies.verifyPage());
     } else if (activePortal === "inbox") {
-      screenHtml = pubShell(dependencies.inboxPage());
+      screenHtml = dependencies.UI.inbox?.auth
+        ? pubShell(dependencies.inboxPage())
+        : dependencies.inboxPage();
     } else if (activePortal === "doc") {
       screenHtml = pubShell(dependencies.docPage());
     } else if (activePortal === "wallet") {

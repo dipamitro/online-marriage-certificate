@@ -12,7 +12,7 @@ function createDefaultUI(): RegistrationUIState {
     draft: null,
     tab: 0,
     errors: null,
-    inbox: { id: null },
+    inbox: { id: null, auth: null, emailInput: "", passwordInput: "", err: "" },
     verify: { input: "", result: null },
     doc: null,
     sb: false,

@@ -205,4 +205,53 @@ describe("Portal boot and lifecycle integration", () => {
     expect(document.querySelector("#root")?.innerHTML).toContain("Genuine and unchanged");
     controller.dispose();
   });
+
+  it("requires email login on /inbox and filters emails to only the signed-in email address", async () => {
+    const controller = bootRegistration({ initialPortal: "inbox" });
+    await controller.ready;
+
+    // 1. Before signing in, shows Email Sign-In screen
+    const loginHtml = document.querySelector("#root")?.innerHTML ?? "";
+    expect(loginHtml).toContain("Sign in to Email");
+    expect(loginHtml).toContain('data-act="maillogin"');
+
+    // 2. Send two emails to different addresses via OMRBridge
+    window.OMRBridge?.mail("alice@mail.com", "Alice", "Alice Secret Invitation", ["Hello Alice"]);
+    window.OMRBridge?.mail("bob@mail.com", "Bob", "Bob Private Certificate", ["Hello Bob"]);
+
+    // 3. Sign in as alice@mail.com
+    const emailInput = document.querySelector<HTMLInputElement>('[data-mailid="1"]');
+    const passwordInput = document.querySelector<HTMLInputElement>('[data-mailpw="1"]');
+    if (emailInput && passwordInput) {
+      emailInput.value = "alice@mail.com";
+      emailInput.dispatchEvent(new Event("input", { bubbles: true }));
+      passwordInput.value = "demo-pass";
+      passwordInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    const loginBtn = document.querySelector('[data-act="maillogin"]');
+    loginBtn?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    const aliceInboxHtml = document.querySelector("#root")?.innerHTML ?? "";
+    expect(aliceInboxHtml).toContain("Email inbox · alice@mail.com");
+    expect(aliceInboxHtml).toContain("Alice Secret Invitation");
+    expect(aliceInboxHtml).not.toContain("Bob Private Certificate");
+
+    // 4. Switch email / sign out and sign in as bob@mail.com
+    const logoutBtn = document.querySelector('[data-act="maillogout"]');
+    logoutBtn?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(document.querySelector("#root")?.innerHTML).toContain("Sign in to Email");
+
+    const bobChip = document.querySelector('[data-act="maildemo"][data-email="bob@mail.com"]');
+    bobChip?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    document
+      .querySelector('[data-act="maillogin"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    const bobInboxHtml = document.querySelector("#root")?.innerHTML ?? "";
+    expect(bobInboxHtml).toContain("Email inbox · bob@mail.com");
+    expect(bobInboxHtml).toContain("Bob Private Certificate");
+    expect(bobInboxHtml).not.toContain("Alice Secret Invitation");
+
+    controller.dispose();
+  });
 });

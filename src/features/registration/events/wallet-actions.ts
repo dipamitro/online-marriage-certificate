@@ -2,7 +2,7 @@ import type { AnyDeps, EmailMessage } from "../types";
 
 /** Wallet commands, isolated from other portal actions. */
 export function createWalletActions(dependencies: AnyDeps) {
-  return async function handleWallet(act: string, b: HTMLElement): Promise<boolean> {
+  return function handleWallet(act: string, b: HTMLElement): boolean | Promise<boolean> {
     const id = b.dataset["id"] ?? null;
     const top = () => window.scrollTo(0, 0);
     switch (act) {
@@ -42,10 +42,13 @@ export function createWalletActions(dependencies: AnyDeps) {
       case "wverc": {
         const a = dependencies.appById(id);
         if (a?.cert) {
-          dependencies.UI.portal = "verify";
-          dependencies.UI.verify.input = a.cert.vds;
-          await dependencies.runVerify();
-          top();
+          return (async () => {
+            dependencies.UI.portal = "verify";
+            dependencies.UI.verify.input = a.cert!.vds;
+            await dependencies.runVerify();
+            top();
+            return true;
+          })();
         }
         break;
       }

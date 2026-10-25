@@ -5,7 +5,7 @@ import type { AnyDeps } from "../types";
  * role route switching (`signinroute`), and demo account autofill (`homedemo`, `sfill`).
  */
 export function createAccountActions(dependencies: AnyDeps) {
-  return async function handleAccount(action: string, button: HTMLElement): Promise<boolean> {
+  return function handleAccount(action: string, button: HTMLElement): boolean {
     switch (action) {
       case "signinroute": {
         const nextRole = button.dataset["role"] || "applicant";

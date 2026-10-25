@@ -1,18 +1,99 @@
 import type { AnyDeps, ApplicationRecord, EmailMessage } from "../types";
 
 /**
- * Handles Email Inbox actions: selecting an email (`mail`), returning to the inbox list (`mailback`),
- * and following actionable deep-links inside an email (`maillink`).
+ * Handles Email Inbox actions:
+ * - Signing into an individual email account (`maillogin`)
+ * - Quick-filling an email account (`maildemo`)
+ * - Signing out / switching email accounts (`maillogout`)
+ * - Selecting an email (`mail`), returning to the inbox list (`mailback`),
+ *   and following actionable deep-links inside an email (`maillink`).
  */
 export function createInboxActions(dependencies: AnyDeps) {
-  return async function handleInbox(action: string, button: HTMLElement): Promise<boolean> {
+  return function handleInbox(action: string, button: HTMLElement): boolean {
     const emailId = button.dataset["id"];
     const scrollToTop = () => window.scrollTo(0, 0);
 
     switch (action) {
+      case "maildemo": {
+        const demoEmail = (button.dataset["email"] ?? "").trim().toLowerCase();
+        dependencies.UI.inbox.emailInput = demoEmail;
+        const usersRecord = dependencies.S.users || {};
+        const matchedNid = Object.keys(usersRecord).find(
+          (nid) =>
+            String(usersRecord[nid]?.email || "")
+              .trim()
+              .toLowerCase() === demoEmail,
+        );
+        const savedPassword = matchedNid ? usersRecord[matchedNid]?.password : "";
+        dependencies.UI.inbox.passwordInput = savedPassword || "demo-pass";
+        dependencies.UI.inbox.err = "";
+        dependencies.render();
+        break;
+      }
+
+      case "maillogin": {
+        const inboxState = dependencies.UI.inbox;
+        const emailInput = (inboxState.emailInput || "").trim().toLowerCase();
+        const passwordInput = inboxState.passwordInput || "";
+
+        if (!emailInput || !passwordInput) {
+          inboxState.err = "Enter your email address and password.";
+          dependencies.render();
+          break;
+        }
+
+        if (!/^\S+@\S+\.\S+$/.test(emailInput)) {
+          inboxState.err = "Enter a valid email address.";
+          dependencies.render();
+          break;
+        }
+
+        // If this email belongs to a user account with a custom password, verify the password
+        const usersRecord = dependencies.S.users || {};
+        const matchedNid = Object.keys(usersRecord).find(
+          (nid) =>
+            String(usersRecord[nid]?.email || "")
+              .trim()
+              .toLowerCase() === emailInput,
+        );
+        const matchedUser = matchedNid ? usersRecord[matchedNid] : null;
+        if (matchedUser?.password && matchedUser.password !== passwordInput) {
+          inboxState.err = "Incorrect password for this email account. Please try again.";
+          dependencies.render();
+          break;
+        }
+
+        inboxState.auth = emailInput;
+        inboxState.id = null;
+        inboxState.emailInput = "";
+        inboxState.passwordInput = "";
+        inboxState.err = "";
+        dependencies.render();
+        scrollToTop();
+        dependencies.toast("Signed in to " + emailInput);
+        break;
+      }
+
+      case "maillogout": {
+        dependencies.UI.inbox.auth = null;
+        dependencies.UI.inbox.id = null;
+        dependencies.UI.inbox.emailInput = "";
+        dependencies.UI.inbox.passwordInput = "";
+        dependencies.UI.inbox.err = "";
+        dependencies.render();
+        scrollToTop();
+        break;
+      }
+
       case "mail": {
+        const signedInEmail = dependencies.UI.inbox.auth?.trim().toLowerCase();
         const emailMessage: EmailMessage | undefined = dependencies.S.emails.find(
-          (item: EmailMessage) => item.id === emailId,
+          (item: EmailMessage) =>
+            item.id === emailId &&
+            (!signedInEmail ||
+              String(item.to || "")
+                .trim()
+                .toLowerCase() === signedInEmail),
         );
         if (emailMessage) {
           emailMessage.read = true;

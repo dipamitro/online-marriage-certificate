@@ -5,7 +5,10 @@ import type { AnyDeps } from "../types";
  * sign-out, and demo data reset (`↺ Reset demo`).
  */
 export function createNavigationActions(dependencies: AnyDeps) {
-  return async function handleNavigation(action: string, button: HTMLElement): Promise<boolean> {
+  return function handleNavigation(
+    action: string,
+    button: HTMLElement,
+  ): boolean | Promise<boolean> {
     const applicationId = button.dataset["id"] ?? null;
     const currentPortal: string = dependencies.UI.portal;
     const scrollToTop = () => window.scrollTo(0, 0);
@@ -142,23 +145,32 @@ export function createNavigationActions(dependencies: AnyDeps) {
       }
 
       case "reset":
-        window.ENLBridge?.reset();
-        dependencies.ls.del(dependencies.STORE);
-        if (window.ENLBridge) {
-          await window.ENLBridge.init();
-        }
-        dependencies.rebuildFromEnl();
-        if (typeof dependencies.seed === "function") {
-          await dependencies.seed();
-        }
-        dependencies.UI.portal = "home";
-        dependencies.UI.auth = { applicant: null, esign: null, registrar: null, wallet: null };
-        dependencies.UI.open = { applicant: null, esign: null, registrar: null, wallet: null };
-        dependencies.UI.draft = null;
-        dependencies.UI.errors = null;
-        dependencies.render();
-        dependencies.toast("Demo data restored");
-        break;
+        return (async () => {
+          window.ENLBridge?.reset();
+          dependencies.ls.del(dependencies.STORE);
+          if (window.ENLBridge) {
+            await window.ENLBridge.init();
+          }
+          dependencies.rebuildFromEnl();
+          if (typeof dependencies.seed === "function") {
+            await dependencies.seed();
+          }
+          dependencies.UI.portal = "home";
+          dependencies.UI.auth = { applicant: null, esign: null, registrar: null, wallet: null };
+          dependencies.UI.open = { applicant: null, esign: null, registrar: null, wallet: null };
+          dependencies.UI.inbox = {
+            id: null,
+            auth: null,
+            emailInput: "",
+            passwordInput: "",
+            err: "",
+          };
+          dependencies.UI.draft = null;
+          dependencies.UI.errors = null;
+          dependencies.render();
+          dependencies.toast("Demo data restored");
+          return true;
+        })();
 
       default:
         return false;

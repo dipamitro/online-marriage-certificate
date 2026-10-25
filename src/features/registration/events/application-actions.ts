@@ -6,7 +6,7 @@ import type { AnyDeps } from "../types";
  * switching form tabs (`gotab`), saving drafts (`savedraft`), and submitting (`submitapp`).
  */
 export function createApplicationActions(dependencies: AnyDeps) {
-  return async function handleApplication(action: string, button: HTMLElement): Promise<boolean> {
+  return function handleApplication(action: string, button: HTMLElement): boolean {
     const applicationId = button.dataset["id"];
     const scrollToTop = () => window.scrollTo(0, 0);
 
