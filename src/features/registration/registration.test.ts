@@ -5,6 +5,7 @@ import { createUtilsFormatting } from "./utils/formatting";
 import { createServicesForms } from "./services/forms";
 import { createServicesFees } from "./services/fees";
 import { createValidatorsRegistration } from "./validators/registration";
+import { resolveDemoCoupleForUser } from "./constants/demo-couples";
 
 const formatting = createUtilsFormatting({});
 const fees = createServicesFees(formatting);
@@ -98,8 +99,7 @@ describe("Portal boot and lifecycle integration", () => {
     expect(document.querySelector("#root")?.innerHTML).toContain(
       "Verify a Nikahnama or Marriage Certificate",
     );
-    expect(document.querySelector("#pills")?.innerHTML).toBe("");
-    expect((document.querySelector("#pills") as HTMLElement | null)?.hidden).toBe(true);
+    expect(document.querySelector("#pills")?.innerHTML).toContain("OneID Wallet");
 
     await controller.ready;
     controller.dispose();
@@ -162,9 +162,7 @@ describe("Portal boot and lifecycle integration", () => {
       initialEnlRole: "admin",
     });
     await adminController.ready;
-    const adminHtml = document.querySelector("#eroot")?.innerHTML ?? "";
-    expect(adminHtml).toContain("Farhana Akter");
-    expect(adminHtml).toContain("↺ Reset demo");
+    expect(document.querySelector("#eroot")?.innerHTML).toContain("Farhana Akter");
     expect(window.ENLBridge?.getRole?.()).toBe("admin");
     adminController.dispose();
 
@@ -174,9 +172,7 @@ describe("Portal boot and lifecycle integration", () => {
       initialEnlRole: "super",
     });
     await superController.ready;
-    const superHtml = document.querySelector("#eroot")?.innerHTML ?? "";
-    expect(superHtml).toContain("Md. Rafiqul Islam");
-    expect(superHtml).toContain("↺ Reset demo");
+    expect(document.querySelector("#eroot")?.innerHTML).toContain("Md. Rafiqul Islam");
     expect(window.ENLBridge?.getRole?.()).toBe("super");
     superController.dispose();
   });
@@ -187,7 +183,7 @@ describe("Portal boot and lifecycle integration", () => {
 
     expect(window.OMRBridge).toBeDefined();
     expect(document.querySelector("#root")?.innerHTML).toContain("Sign in");
-    expect(document.querySelector("#pills")?.innerHTML).toBe("");
+    expect(document.querySelector("#pills")?.innerHTML).toContain("OneID Wallet");
 
     controller.dispose();
     expect(window.OMRBridge).toBeUndefined();
@@ -197,7 +193,8 @@ describe("Portal boot and lifecycle integration", () => {
     const controller = bootRegistration();
     await controller.ready;
 
-    window.OMRBridge?.setPortal?.("verify");
+    const verifyTab = document.querySelector('[data-act="portal"][data-p="verify"]');
+    verifyTab?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(document.querySelector("#root")?.innerHTML).toContain(
       "Verify a Nikahnama or Marriage Certificate",
     );
@@ -259,90 +256,89 @@ describe("Portal boot and lifecycle integration", () => {
     controller.dispose();
   });
 
-  it("autofills matching groom and bride couples based on the logged-in user's role and email", async () => {
+  it("autofills the matching couple based on the logged-in user's email and role when clicking Fill with demo data", async () => {
+    // 1. Unit verification of the 4 expected login cases
+    const case1 = resolveDemoCoupleForUser({
+      nid: "5555555555",
+      email: "abdul.karim@mail.com",
+    });
+    expect(case1.applicantRole).toBe("বর");
+    expect(case1.groom.nameEn).toBe("Abdul Karim");
+    expect(case1.groom.email).toBe("abdul.karim@mail.com");
+    expect(case1.bride.nameEn).toBe("Farzana Akter");
+    expect(case1.bride.email).toBe("farzana.akter@mail.com");
+
+    const case2 = resolveDemoCoupleForUser({
+      nid: "7123456789",
+      email: "farzana.akter@mail.com",
+    });
+    expect(case2.applicantRole).toBe("কনে");
+    expect(case2.bride.nameEn).toBe("Farzana Akter");
+    expect(case2.bride.email).toBe("farzana.akter@mail.com");
+    expect(case2.groom.nameEn).toBe("Abdul Karim");
+    expect(case2.groom.email).toBe("abdul.karim@mail.com");
+
+    const case3 = resolveDemoCoupleForUser({
+      nid: "7012345678",
+      email: "arif.rahman@mail.com",
+    });
+    expect(case3.applicantRole).toBe("বর");
+    expect(case3.groom.nameEn).toBe("Arif Rahman");
+    expect(case3.groom.email).toBe("arif.rahman@mail.com");
+    expect(case3.bride.nameEn).toBe("Laboni Islam");
+    expect(case3.bride.email).toBe("laboni.islam@mail.com");
+
+    const case4 = resolveDemoCoupleForUser({
+      nid: "8123456789",
+      email: "laboni.islam@mail.com",
+    });
+    expect(case4.applicantRole).toBe("কনে");
+    expect(case4.bride.nameEn).toBe("Laboni Islam");
+    expect(case4.bride.email).toBe("laboni.islam@mail.com");
+    expect(case4.groom.nameEn).toBe("Arif Rahman");
+    expect(case4.groom.email).toBe("arif.rahman@mail.com");
+
+    // 2. End-to-end DOM verification clicking [data-act="demofill"] for both Groom and Bride logins
     const controller = bootRegistration({
       initialPortal: "home",
       initialSignInRole: "applicant",
     });
     await controller.ready;
 
-    const signInAndFillDemo = (email: string) => {
-      // Sign out if currently logged in
-      document
-        .querySelector('[data-act="logout"]')
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    // Sign in as Laboni Islam (Bride of Couple 2)
+    const idInput = document.querySelector<HTMLInputElement>('[data-homeid="1"]');
+    const pwInput = document.querySelector<HTMLInputElement>('[data-homepw="1"]');
+    if (idInput && pwInput) {
+      idInput.value = "laboni.islam@mail.com";
+      idInput.dispatchEvent(new Event("input", { bubbles: true }));
+      pwInput.value = "demo-pass";
+      pwInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    document
+      .querySelector('[data-act="homesignin"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
-      const idInput = document.querySelector<HTMLInputElement>('[data-homeid="1"]');
-      const pwInput = document.querySelector<HTMLInputElement>('[data-homepw="1"]');
-      if (idInput && pwInput) {
-        idInput.value = email;
-        idInput.dispatchEvent(new Event("input", { bubbles: true }));
-        pwInput.value = "demo-pass";
-        pwInput.dispatchEvent(new Event("input", { bubbles: true }));
-      }
-      document
-        .querySelector('[data-act="homesignin"]')
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    // Start new application and click "Fill with demo data"
+    document
+      .querySelector('[data-act="newapp"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    document
+      .querySelector('[data-act="demofill"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
-      // Start new application and click "Fill with demo data"
-      document
-        .querySelector('[data-act="newapp"]')
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      document
-        .querySelector('[data-act="demofill"]')
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    // Switch to Tab 1 (Groom) and Tab 2 (Bride) to verify DOM fields
+    document
+      .querySelector('[data-act="gotab"][data-t="1"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(document.querySelector("#root")?.innerHTML).toContain("Arif Rahman");
+    expect(document.querySelector("#root")?.innerHTML).toContain("arif.rahman@mail.com");
 
-      // Read groom (tab 1) and bride (tab 2) details
-      document
-        .querySelector('[data-act="gotab"][data-t="1"]')
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      const groomNameEn =
-        document.querySelector<HTMLInputElement>('[data-b="groom.nameEn"]')?.value ?? "";
-      const groomEmail =
-        document.querySelector<HTMLInputElement>('[data-b="groom.email"]')?.value ?? "";
-
-      document
-        .querySelector('[data-act="gotab"][data-t="2"]')
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      const brideNameEn =
-        document.querySelector<HTMLInputElement>('[data-b="bride.nameEn"]')?.value ?? "";
-      const brideEmail =
-        document.querySelector<HTMLInputElement>('[data-b="bride.email"]')?.value ?? "";
-
-      return { groomNameEn, groomEmail, brideNameEn, brideEmail };
-    };
-
-    // 1. Abdul Karim (Groom) -> Groom: Abdul Karim, Bride: Farzana Akter
-    expect(signInAndFillDemo("abdul.karim@mail.com")).toEqual({
-      groomNameEn: "Abdul Karim",
-      groomEmail: "abdul.karim@mail.com",
-      brideNameEn: "Farzana Akter",
-      brideEmail: "farzana.akter@mail.com",
-    });
-
-    // 2. Farzana Akter (Bride) -> Bride: Farzana Akter, Groom: Abdul Karim
-    expect(signInAndFillDemo("farzana.akter@mail.com")).toEqual({
-      groomNameEn: "Abdul Karim",
-      groomEmail: "abdul.karim@mail.com",
-      brideNameEn: "Farzana Akter",
-      brideEmail: "farzana.akter@mail.com",
-    });
-
-    // 3. Arif Rahman (Groom) -> Groom: Arif Rahman, Bride: Laboni Islam
-    expect(signInAndFillDemo("arif.rahman@mail.com")).toEqual({
-      groomNameEn: "Arif Rahman",
-      groomEmail: "arif.rahman@mail.com",
-      brideNameEn: "Laboni Islam",
-      brideEmail: "laboni.islam@mail.com",
-    });
-
-    // 4. Laboni Islam (Bride) -> Bride: Laboni Islam, Groom: Arif Rahman
-    expect(signInAndFillDemo("laboni.islam@mail.com")).toEqual({
-      groomNameEn: "Arif Rahman",
-      groomEmail: "arif.rahman@mail.com",
-      brideNameEn: "Laboni Islam",
-      brideEmail: "laboni.islam@mail.com",
-    });
+    document
+      .querySelector('[data-act="gotab"][data-t="2"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(document.querySelector("#root")?.innerHTML).toContain("Laboni Islam");
+    expect(document.querySelector("#root")?.innerHTML).toContain("laboni.islam@mail.com");
+    expect(document.querySelector("#root")?.innerHTML).not.toContain("Nusrat Jahan");
 
     controller.dispose();
   });

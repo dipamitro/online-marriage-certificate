@@ -575,7 +575,6 @@ export interface OMRBridgeContract {
   home(signOutRole?: string): void;
   openDesk(nid: string): void;
   refresh(): void;
-  resetDemo?(): Promise<void> | void;
   getPortal?(): string;
   setPortal?(portal: string): void;
   getSignInRole?(): string;

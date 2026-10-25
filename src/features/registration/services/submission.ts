@@ -103,8 +103,9 @@ export function createServicesSubmission(dependencies: AnyDeps) {
     dependencies.save();
     dependencies.UI.draft = null;
     const mineK = (["groom", "bride"] as const).find(
-      (k) => dependencies.toEn(a.f[k].nid).trim() === a.owner,
-    );
+        (k) => dependencies.toEn(a.f[k].nid).trim() === a.owner,
+      ),
+      others = esignTargets(a).map((k) => (k === "groom" ? "groom" : "bride"));
     if (mineK) {
       dependencies.UI.page.applicant = "esignreq";
       dependencies.UI.open.applicant = null;
@@ -115,7 +116,11 @@ export function createServicesSubmission(dependencies: AnyDeps) {
     }
     dependencies.render();
     window.scrollTo(0, 0);
-    dependencies.toast("Application submitted");
+    dependencies.toast(
+      mineK
+        ? `Submitted. eKYC invitation emailed to the ${others.join(" and ")}. Now eSign as the ${mineK} below.`
+        : `Submitted. eKYC invitations emailed to the ${others.join(" and ")}.`,
+    );
   }
   return { startDraft, saveDraft, esignTargets, sendInvites, doSubmit };
 }

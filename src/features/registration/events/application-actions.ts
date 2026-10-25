@@ -1,4 +1,5 @@
 import type { AnyDeps } from "../types";
+import { resolveDemoCoupleForUser } from "../constants/demo-couples";
 
 /**
  * Handles Marriage Registration Application form actions:
@@ -24,33 +25,40 @@ export function createApplicationActions(dependencies: AnyDeps) {
         break;
 
       case "demofill": {
+        const previousPreferredRole = dependencies.UI.draft?.f?.applicantRole ?? "";
+        dependencies.UI.draft.f = dependencies.demoForm();
+
         const currentApplicantNid: string | null = dependencies.UI.auth.applicant;
         const currentUser = currentApplicantNid ? dependencies.userOf(currentApplicantNid) : null;
         const currentPerson = currentApplicantNid ? dependencies.PEOPLE[currentApplicantNid] : null;
-        const currentEmail =
-          currentUser?.email ||
-          (currentApplicantNid && typeof dependencies.demoEmail === "function"
-            ? dependencies.demoEmail(currentApplicantNid)
-            : "");
+        const currentAccount = currentApplicantNid ? dependencies.accOf(currentApplicantNid) : null;
 
-        dependencies.UI.draft.f = dependencies.demoForm({
-          nid: currentApplicantNid,
-          email: currentEmail,
-          nameEn: currentUser?.name || currentPerson?.en || null,
-          nameBn: currentUser?.nameBn || currentPerson?.bn || currentUser?.name || null,
-          dob: currentUser?.dob || currentPerson?.dob || null,
-          mobile:
-            currentUser?.mobile ||
-            (currentApplicantNid && typeof dependencies.demoMobile === "function"
-              ? dependencies.demoMobile(currentApplicantNid)
-              : null),
-          gender: currentUser?.gender || currentPerson?.g || null,
-          preferredRole: dependencies.UI.draft?.f?.applicantRole || null,
-          existingApps: dependencies.S?.apps || [],
-        });
+        const resolvedCouple = resolveDemoCoupleForUser(
+          currentApplicantNid
+            ? {
+                nid: currentApplicantNid,
+                email: currentUser?.email || currentAccount?.email || "",
+                nameEn: currentUser?.name || currentPerson?.en || currentAccount?.name,
+                nameBn: currentUser?.nameBn || currentPerson?.bn || currentUser?.name,
+                dob: currentUser?.dob || currentPerson?.dob,
+                mobile: currentUser?.mobile,
+                gender: currentUser?.gender || currentPerson?.g,
+                preferredRole: previousPreferredRole,
+              }
+            : null,
+        );
+
+        dependencies.UI.draft.f.groom = resolvedCouple.groom;
+        dependencies.UI.draft.f.bride = resolvedCouple.bride;
+        dependencies.UI.draft.f.applicantRole = resolvedCouple.applicantRole;
+        dependencies.UI.draft.f.m.contact =
+          resolvedCouple.applicantRole === "কনে"
+            ? resolvedCouple.bride.mobile
+            : resolvedCouple.groom.mobile;
 
         dependencies.UI.errors = null;
         dependencies.render();
+        dependencies.toast("All 7 sections filled with demo data");
         break;
       }
 
@@ -161,7 +169,7 @@ export function createApplicationActions(dependencies: AnyDeps) {
           dependencies.sendInvites(application, true);
           dependencies.save();
           dependencies.render();
-          dependencies.toast("Invitation resent");
+          dependencies.toast("Invitation emails sent again");
         }
         break;
       }

@@ -32,6 +32,7 @@ export function createServicesSignIn(dependencies: AnyDeps) {
       window.ENLBridge?.show("applicant", nid);
       dependencies.render();
       window.scrollTo(0, 0);
+      dependencies.toast("Signed in with OneID");
       return;
     }
 
@@ -76,6 +77,7 @@ export function createServicesSignIn(dependencies: AnyDeps) {
 
     dependencies.render();
     window.scrollTo(0, 0);
+    dependencies.toast("Signed in with OneID");
   }
 
   return { doLogin };

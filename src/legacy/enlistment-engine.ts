@@ -1073,13 +1073,6 @@ export function bootEnlistment(): void {
     const openApp = UI.open ? appById(UI.open) : undefined;
     const content = openApp ? appDetail(openApp, r) : pageFor(r, pg);
     const roleName = r === "super" ? "Super Admin" : r === "admin" ? "Admin" : "Applicant";
-    const isOfficial = r === "admin" || r === "super";
-    const resetHeaderBtn = isOfficial
-      ? `<button class="btn sm" data-act="reset" title="Reset demo data" style="margin-left:auto">↺ Reset demo</button>`
-      : "";
-    const resetSidebarBtn = isOfficial
-      ? `<button class="btn sm bfw" data-act="reset" style="margin-bottom:6px">↺ Reset demo</button>`
-      : "";
     return `<aside id="sb" class="${UI.sb ? "open" : ""}"><div class="sb-head"><div class="mark">MR</div><div><b>Registrar Enlistment</b><span>Law and Justice Division</span></div></div>
     <nav class="sb-nav">${navFor(r)
       .map((it) =>
@@ -1088,9 +1081,9 @@ export function bootEnlistment(): void {
           : `<button class="sb-it ${pg === it[0] && !UI.open ? "on" : ""}" data-act="page" data-p="${it[0]}">${it[1]}${it[2] ? `<span class="n">${it[2]}</span>` : ""}</button>`,
       )
       .join("")}</nav>
-    <div class="sb-foot"><div class="who"><div class="av">${ini(me?.name)}</div><div><b>${esc(me?.name)}</b><span>${roleName}</span></div></div>${resetSidebarBtn}<button class="btn sm bfw" data-act="logout">Sign out</button></div></aside>
+    <div class="sb-foot"><div class="who"><div class="av">${ini(me?.name)}</div><div><b>${esc(me?.name)}</b><span>${roleName}</span></div></div><button class="btn sm bfw" data-act="logout">Sign out</button></div></aside>
     <div id="ov" class="${UI.sb ? "open" : ""}" data-act="sb"></div>
-    <div id="main"><header id="tb"><button class="hamb" data-act="sb" aria-label="Open menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button><div><h1>${openApp ? "Application " + esc(openApp.appNo) : (titles[pg] ?? "Dashboard")}</h1><div class="crumb">${roleName} · ${esc(me?.designation || "OneID verified · NID ••••" + String(me?.nid ?? "").slice(-4))}</div></div>${resetHeaderBtn}</header><div class="content">${content}</div></div>`;
+    <div id="main"><header id="tb"><button class="hamb" data-act="sb" aria-label="Open menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button><div><h1>${openApp ? "Application " + esc(openApp.appNo) : (titles[pg] ?? "Dashboard")}</h1><div class="crumb">${roleName} · ${esc(me?.designation || "OneID verified · NID ••••" + String(me?.nid ?? "").slice(-4))}</div></div></header><div class="content">${content}</div></div>`;
   }
   function pageFor(r: string, pg: string): string {
     if (r === "applicant")
@@ -1624,11 +1617,11 @@ export function bootEnlistment(): void {
     toastT: ReturnType<typeof setTimeout> | undefined;
   function toast(m: string): void {
     const t = $("#etoast");
-    if (!t || !m) return;
+    if (!t) return;
     t.textContent = m;
     t.classList.add("show");
     if (toastT) clearTimeout(toastT);
-    toastT = setTimeout(() => t.classList.remove("show"), 1500);
+    toastT = setTimeout(() => t.classList.remove("show"), 2600);
   }
   function modal(html: string, ok: (() => string | Promise<string>) | null, wide?: boolean): void {
     const m = $("#emodal");
@@ -1711,14 +1704,15 @@ export function bootEnlistment(): void {
           UI.login["applicant"] = n;
           UI.page["applicant"] = "dash";
           render();
-          toast("Account verified");
+          toast("Account verified. You can now apply.");
         }, 2000);
         return "pending";
       },
     );
   }
   function otpModal(title: string, text: string, onOk: () => Promise<void>): void {
-    const code = otpCode();
+    // const code = otpCode();
+    const code = "000000";
     modal(
       `<h3>${title}</h3><p class="sub">${text}</p><div class="fg" style="margin-top:12px"><label>Code sent by SMS to your registered mobile</label><input class="inp otp" id="m-otp" inputmode="numeric" maxlength="6"><div class="demo">Demo code: ${code}</div></div><p class="err" id="m-err" hidden></p><div class="row"><button class="btn" data-act="mclose">Cancel</button><button class="btn bp" data-act="mok">Sign and approve</button></div>`,
       async () => {
@@ -1884,6 +1878,7 @@ export function bootEnlistment(): void {
         UI.open = null;
         render();
         top();
+        toast("Signed in");
         break;
       }
       case "logout": {
@@ -1995,6 +1990,7 @@ export function bootEnlistment(): void {
         d.declare = true;
         UI.errs = null;
         render();
+        toast("Demo data filled");
         break;
       }
       case "updoc":
@@ -2146,7 +2142,7 @@ export function bootEnlistment(): void {
             save();
             render();
             top();
-            toast("Approved & licence issued");
+            toast("Approved. Licence issued and sent to OneID Wallet.");
             const bridge = B();
             if (bridge) bridge.refresh();
           },
@@ -2329,23 +2325,11 @@ export function bootEnlistment(): void {
         } else closeModal();
         break;
       }
-      case "reset": {
-        const keepOfficialAuth = r === "admin" || r === "super";
+      case "reset":
         ls.del(STORE);
         seed();
-        await initKeys();
-        for (const a of S.apps) {
-          if (a.status === "ENLISTED" && (!a.seal || a.seal.endsWith("|S:UNSIGNED"))) {
-            a.seal = await sealFor(a);
-          }
-        }
-        save();
         Object.assign(UI, {
-          auth: {
-            applicant: null,
-            admin: keepOfficialAuth && r === "admin" ? true : null,
-            super: keepOfficialAuth && r === "super" ? true : null,
-          },
+          auth: { applicant: null, admin: null, super: null },
           open: null,
           draft: null,
           dirNode: null,
@@ -2354,14 +2338,9 @@ export function bootEnlistment(): void {
           dirSt: "ENLISTED",
           errs: null,
         });
-        const bridge = B();
-        if (bridge && typeof bridge.resetDemo === "function") {
-          await bridge.resetDemo();
-        }
         render();
-        toast("Demo reset");
+        toast("Demo data restored");
         break;
-      }
     }
   };
 

@@ -120,7 +120,7 @@ export function createEventsOnboardingActions(dependencies: AnyDeps) {
         o.otp = "";
         o.sent = Date.now();
         dependencies.renderOnb();
-        dependencies.toast("Code resent");
+        dependencies.toast("A new code has been sent");
         return true;
       case "ob-otp":
         if (o.otp !== o.code) {

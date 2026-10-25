@@ -26,12 +26,12 @@ export function createComponentsDialogs(dependencies: AnyDeps) {
    */
   function toast(message: string): void {
     const toastEl = dependencies.$("#toast") as HTMLElement | null;
-    if (!toastEl || !message) return;
+    if (!toastEl) return;
 
     toastEl.textContent = message;
     toastEl.classList.add("show");
     clearTimeout(toastTimeout);
-    toastTimeout = dependencies.lifecycle.timeout(() => toastEl.classList.remove("show"), 1500);
+    toastTimeout = dependencies.lifecycle.timeout(() => toastEl.classList.remove("show"), 2600);
   }
 
   /**
@@ -178,7 +178,7 @@ export function createComponentsDialogs(dependencies: AnyDeps) {
           dependencies.save();
           closeModal();
           dependencies.render();
-          toast("eKYC verified");
+          toast("eKYC complete. You can now eSign.");
         }
       };
 

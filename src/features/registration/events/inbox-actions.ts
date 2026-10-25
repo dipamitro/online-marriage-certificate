@@ -70,6 +70,7 @@ export function createInboxActions(dependencies: AnyDeps) {
         inboxState.err = "";
         dependencies.render();
         scrollToTop();
+        dependencies.toast("Signed in to " + emailInput);
         break;
       }
 
