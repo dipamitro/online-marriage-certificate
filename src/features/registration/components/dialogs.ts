@@ -1,8 +1,6 @@
+/* eslint-disable prettier/prettier */
 import type { AnyDeps, ApplicationRecord } from "../types";
 
-/**
- * Step prompts displayed during the simulated biometric face liveness check.
- */
 const LIVENESS_PROMPTS = [
   "Hold your face inside the circle",
   "Blink slowly",

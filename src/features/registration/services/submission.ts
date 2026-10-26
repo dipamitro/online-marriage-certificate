@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import type { AnyDeps, ApplicationRecord, ApplicationStatus } from "../types";
 
 /** services/submission. Dependencies: S, UI, accOf, appById, blankForm, clone, fee, hist, inr, now, pushMail, render, save, toEn, toast, today, userOf. */

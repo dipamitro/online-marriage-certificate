@@ -1,5 +1,4 @@
-import { PortalErrorBanner } from "@/components/portal/PortalErrorBanner";
-import { PortalMountContainers } from "@/components/portal/PortalMountContainers";
+import { PortalLayout } from "@/layouts/PortalLayout";
 import {
   useMarriagePortal,
   type EnlistmentRole,
@@ -30,10 +29,5 @@ export function MarriagePortal({
     ...(initialEnlRole !== undefined ? { initialEnlRole } : {}),
   });
 
-  return (
-    <>
-      <PortalErrorBanner message={error} onRetry={retry} />
-      <PortalMountContainers />
-    </>
-  );
+  return <PortalLayout error={error} onRetry={retry} />;
 }

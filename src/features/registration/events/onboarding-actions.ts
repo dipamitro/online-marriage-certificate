@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import type { AnyDeps, OnboardingState } from "../types";
 
 /** events/onboarding-actions. Dependencies: PEOPLE, REGISTRARS, UI, ageAt, mailOk, nidOk, obBack, obCands, obFillPerson, obGo, obSplit, otp, renderOnb, toEn, toast, userOf. */

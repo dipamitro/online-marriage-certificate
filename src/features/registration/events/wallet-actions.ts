@@ -75,4 +75,3 @@ export function createWalletActions(dependencies: AnyDeps) {
     return true;
   };
 }
-

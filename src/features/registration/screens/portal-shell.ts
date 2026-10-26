@@ -44,8 +44,7 @@ export function createScreensPortalShell(dependencies: AnyDeps) {
     const pillsContainer = dependencies.$("#pills") as HTMLElement | null;
     if (pillsContainer) {
       if (isAdminOrSuperAdmin) {
-        pillsContainer.innerHTML =
-          `<button data-act="reset" title="Reset demo data">↺ Reset demo</button>`;
+        pillsContainer.innerHTML = `<button data-act="reset" title="Reset demo data">↺ Reset demo</button>`;
         pillsContainer.style.display = "";
         document.documentElement.style.setProperty("--pill", "46px");
       } else {

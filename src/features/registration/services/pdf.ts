@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import type { AnyDeps, ApplicationRecord } from "../types";
 
 interface PdfDownloader {

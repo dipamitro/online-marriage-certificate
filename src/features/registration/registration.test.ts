@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { beforeEach, describe, expect, it } from "vitest";
 import { bootEnlistment } from "@/legacy/enlistment-engine";
 import { bootRegistration } from "@/legacy/registration-engine";
