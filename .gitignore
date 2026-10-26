@@ -13,7 +13,7 @@ dist-ssr
 .output
 .vinxi
 .tanstack/**
-.AGENTS.md
+AGENTS.md
 .nitro
 *.local
 
